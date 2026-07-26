@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -67,7 +68,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -84,7 +84,6 @@ import com.example.assignment.ui.theme.PrimaryYellow
 import com.example.assignment.ui.theme.SafeColor
 import com.example.assignment.ui.theme.SecondaryBlue
 import com.example.assignment.ui.theme.SecondaryGreen
-import com.example.assignment.ui.theme.SecondaryTextColor
 import com.example.assignment.ui.theme.SecondaryYellow
 import com.example.assignment.ui.theme.navigationItemColors
 import com.example.assignment.ui.theme.textErrorColor
@@ -151,7 +150,7 @@ val reservationsList = listOf(
 @Composable
 fun MainApp(){
     val navController = rememberNavController()
-    val isConsumer = false
+    val isConsumer = true
 
     Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = { AppNavigationBar(navController, isConsumer) })
     { innerPadding ->
@@ -236,7 +235,7 @@ fun ProviderOrderScreen(innerPadding: PaddingValues, navController: NavControlle
         modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { Text("Orders", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+        item { Text("Orders", style = MaterialTheme.typography.headlineMedium) }
         items(orders) { order ->
             ProviderOrderCard(order)
         }
@@ -248,8 +247,8 @@ fun ProviderOrderCard(order: Reservation) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
@@ -264,10 +263,10 @@ fun ProviderOrderCard(order: Reservation) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(order.foodName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("Code: ${order.code}", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = PrimaryGreen)
+                    Text("Code: ${order.code}", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Qty: ${order.quantity}", fontSize = 12.sp, color = Color.Gray)
-                        Text("Pickup: ${order.pickupTimeRange}", fontSize = 12.sp, color = Color.Gray)
+                        Text("Qty: ${order.quantity}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondary)
+                        Text("Pickup: ${order.pickupTimeRange}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondary)
                     }
                 }
             }
@@ -279,8 +278,8 @@ fun ProviderOrderCard(order: Reservation) {
                 enabled = !completed, // 只有未完成时可点击
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (completed) Color(0xFFF1F5F9) else PrimaryGreen,
-                    disabledContainerColor = Color(0xFFF1F5F9)
+                    containerColor = if (completed) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.background
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -296,9 +295,13 @@ fun ProviderOrderCard(order: Reservation) {
 @Composable
 fun ProviderNotificationScreen(innerPadding: PaddingValues) {
     val providerNotifications = listOf(
-        NotificationItem("New order! Order #RSV-001 pickup starts in 30 mins.", "10 mins ago", R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24, SecondaryBlue, PrimaryBlue),
-        NotificationItem("Order #RSV-002 pickup window is ending soon.", "1 hour ago", R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24, SecondaryYellow, PrimaryYellow),
-        NotificationItem("Low stock alert! You have less than 3 items for 'Kaya Bun'.", "3 hours ago", R.drawable.add_circle_24dp_e3e3e3_fill0_wght400_grad0_opsz24, SafeColor, PrimaryGreen)
+        NotificationItem("New order! Order #RSV-001 pickup starts in 30 mins.", "10 mins ago", R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24,
+            MaterialTheme.colorScheme.onTertiary, MaterialTheme.colorScheme.secondaryContainer),
+        NotificationItem("Order #RSV-002 pickup window is ending soon.", "1 hour ago", R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24,
+            MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.tertiary),
+        NotificationItem("Low stock alert! You have less than 3 items for 'Kaya Bun'.", "3 hours ago", R.drawable.add_circle_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.primary)
     )
 
     Column(
@@ -310,9 +313,8 @@ fun ProviderNotificationScreen(innerPadding: PaddingValues) {
     ) {
         Text(
             text = "Notifications",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = PrimaryTextColor,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -320,8 +322,8 @@ fun ProviderNotificationScreen(innerPadding: PaddingValues) {
             items(providerNotifications) { notification ->
                 Card(
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.background)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -347,15 +349,15 @@ fun ProviderNotificationScreen(innerPadding: PaddingValues) {
                         Column {
                             Text(
                                 text = notification.title,
-                                fontSize = 14.sp,
-                                color = PrimaryTextColor,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 lineHeight = 20.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = notification.timeAgo,
                                 fontSize = 12.sp,
-                                color = SecondaryTextColor
+                                color = MaterialTheme.colorScheme.onSecondary
                             )
                         }
                     }
@@ -372,7 +374,7 @@ fun ProfileScreen(innerPadding: PaddingValues) {
             .padding(innerPadding),
         contentAlignment = Alignment.Center
     ){
-        Text("Profile Screen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Profile Screen", style = MaterialTheme.typography.headlineMedium)
     }
 }
 
@@ -384,7 +386,7 @@ fun InventoryScreen(innerPadding: PaddingValues) {
             .padding(innerPadding),
         contentAlignment = Alignment.Center
     ){
-        Text("Inventory Screen Coming Soon!", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Inventory Screen Coming Soon!", style = MaterialTheme.typography.headlineMedium)
     }
 }
 
@@ -401,7 +403,7 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .padding(innerPadding)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -415,8 +417,8 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                 verticalAlignment = Alignment.CenterVertically
             ){
                 Column{
-                    Text(text = "FoodLoop", color = PrimaryGreen, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(text = "Reduce waste, save food \uD83C\uDF3F", fontSize = 14.sp, color = SecondaryGreen)
+                    Text(text = "FoodLoop", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.displaySmall)
+                    Text(text = "Reduce waste, save food \uD83C\uDF3F", fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary)
                 }
 
                 Box{
@@ -424,12 +426,12 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                         onClick = {navController.navigate("notifications")},
                         modifier = Modifier
                             .size(36.dp)
-                            .background(Color.White,CircleShape)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.notifications_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                             contentDescription = "Notification",
-                            tint = PrimaryGreen
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -446,14 +448,14 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
         }
         //Nearby Restaurant Slider
         item {
-            Text("Nearby Restaurants", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+            Text("Nearby Restaurants", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
             Spacer(modifier = Modifier.height(12.dp))
 
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(restaurant){ rest ->
                     Card(
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(2.dp),
                         modifier = Modifier
                             .size(width = 140.dp, height = 150.dp)
@@ -463,7 +465,7 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                             .shadow(
                                 elevation = 8.dp,  //shadow size
                                 shape = RoundedCornerShape(12.dp),
-                                spotColor = Color.Gray, //shadow color
+                                spotColor = MaterialTheme.colorScheme.onSecondary, //shadow color
                                 ambientColor = Color.LightGray
                             )
                     ) {
@@ -486,12 +488,12 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                                     fontSize = 14.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    color = Color.Black
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Text(
                                     text = rest.distance,
-                                    color = Color.Gray,
-                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     overflow = TextOverflow.Ellipsis,
                                     maxLines = 1
                                 )
@@ -503,7 +505,7 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
         }
         //Suggested Food separator
         item {
-            Text("Suggested Food", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+            Text("Suggested Food", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
             Spacer(modifier = Modifier.height(8.dp))
 
             val categories = listOf("All","Meals","Bakery","Snacks")
@@ -548,7 +550,7 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                         navController.navigate("food_detail/\$index")
                     },
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Column {
@@ -574,7 +576,7 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                                 text = food.title,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1E293B),
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.weight(1f) //push tag to the right
                             )
                             Spacer(modifier = Modifier.height(12.dp))
@@ -594,7 +596,7 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                             Text(
                                 text = food.description,
                                 fontSize = 13.sp,
-                                color = SecondaryTextColor,
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis //if context exceed display "..."
                             )
@@ -608,8 +610,8 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                         ) {
                             Text(
                                 text = "RM ${"%.2f".format(food.oriPrice)}",
-                                fontSize = 13.sp,
-                                color = Color(0xFF94A3B8),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 textDecoration = TextDecoration.LineThrough //ori price crossed out
                             )
 
@@ -617,9 +619,8 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
 
                             Text(
                                 text = "RM ${"%.2f".format(finalPrice)}",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black,
-                                color = SecondaryGreen
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.secondary
                             )
 
                         }
@@ -632,13 +633,13 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                             horizontalArrangement = Arrangement.SpaceBetween
                         ){
                             Text("Pickup: ${food.timeLabel}",
-                                fontSize = 11.sp,
-                                color = Color.DarkGray,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 fontWeight = FontWeight.Medium
                             )
                             Text("Only ${food.quantity} left",
                                 fontSize = 11.sp,
-                                color = Color(0xFFE53935),
+                                color = MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -679,14 +680,14 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
                 // Shop Icon
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = SafeColor,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.size(50.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             painter = painterResource(R.drawable.home_4_svgrepo_com),
                             contentDescription = "Shop",
-                            tint = PrimaryGreen,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -696,8 +697,8 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
 
                 // Shop Name
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Restaurant dashboard", fontSize = 12.sp, color = SecondaryTextColor)
-                    Text(text = "Abang Lee Bakery", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = PrimaryTextColor)
+                    Text(text = "Restaurant dashboard", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondary)
+                    Text(text = "Abang Lee Bakery", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
                 }
 
                 // Notification Bell
@@ -708,7 +709,7 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
                     modifier = Modifier.size(40.dp)
                 ) {
                     IconButton(onClick = { navController.navigate("notifications") }) {
-                        Icon(painter = painterResource(R.drawable.notifications_24dp_e3e3e3_fill0_wght400_grad0_opsz24), contentDescription = "Notification", tint = PrimaryGreen)
+                        Icon(painter = painterResource(R.drawable.notifications_24dp_e3e3e3_fill0_wght400_grad0_opsz24), contentDescription = "Notification", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -746,18 +747,18 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
         // 4. Section Title
         item {
             Column {
-                Text(text = "Manage your listings", fontSize = 12.sp, color = SecondaryTextColor)
+                Text(text = "Manage your listings", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondary)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Your Active Surplus Food", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = PrimaryTextColor)
+                    Text(text = "Your Active Surplus Food", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
                     Text(
                         text = "+ Add",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryGreen,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .clickable { navController.navigate("add") }
                             .padding(4.dp)
@@ -773,10 +774,10 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(1.dp),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -815,13 +816,13 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
                                 Spacer(modifier = Modifier.width(2.dp))
 
                                 val badgeColor = when {
-                                    isSoldOut -> Color(0xFFF1F5F9)
-                                    item.availableCount <= 5 -> SecondaryYellow
-                                    else -> SafeColor
+                                    isSoldOut -> MaterialTheme.colorScheme.outline
+                                    item.availableCount <= 5 -> MaterialTheme.colorScheme.surfaceVariant
+                                    else -> MaterialTheme.colorScheme.primaryContainer
                                 }
                                 val badgeTextColor = when {
-                                    isSoldOut -> Color.Gray
-                                    item.availableCount <= 5 -> PrimaryYellow
+                                    isSoldOut -> MaterialTheme.colorScheme.onSecondary
+                                    item.availableCount <= 5 -> MaterialTheme.colorScheme.tertiary
                                     else -> MaterialTheme.colorScheme.primary
                                 }
                                 val badgeText = when {
@@ -834,7 +835,7 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                                         Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(badgeTextColor))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text(text = badgeText, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = badgeTextColor)
+                                        Text(text = badgeText, style = MaterialTheme.typography.labelSmall, color = badgeTextColor)
                                     }
                                 }
                             }
@@ -846,12 +847,12 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
 
                             Spacer(modifier = Modifier.height(6.dp))
                             val priceColor = if (isSoldOut) Color.Gray else MaterialTheme.colorScheme.primary
-                            Text(text = "RM${"%.0f".format(item.price)}", fontSize = 16.sp, fontWeight = FontWeight.Black, color = priceColor)
+                            Text(text = "RM${"%.0f".format(item.price)}", style = MaterialTheme.typography.titleLarge, color = priceColor)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFF1F5F9))) // Divider
+                    Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline)) // Divider
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
@@ -861,20 +862,20 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
                     ) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = SafeColor.copy(alpha = 0.5f),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             modifier = Modifier.clickable { /* TODO: Edit Action */ }
                         ) {
-                            Text(text = "Edit", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                            Text(text = "Edit", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFFEBEE),
+                            color = MaterialTheme.colorScheme.errorContainer,
                             modifier = Modifier.clickable { showDeleteDialog = true }
                         ) {
-                            Text(text = "Delete", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                            Text(text = "Delete", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                         }
                     }
                 }
@@ -914,24 +915,24 @@ fun ProviderHomeScreen(innerPadding: PaddingValues, navController: NavController
 fun StatCard(modifier: Modifier = Modifier, title: String, value: String, iconRes: Int) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(1.dp),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = title, fontSize = 11.sp, color = SecondaryTextColor, lineHeight = 14.sp)
+            Text(text = title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondary, lineHeight = 14.sp)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = PrimaryTextColor)
+            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
 
 @Composable
 fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackClick:()-> Unit){
-    val redBadgeColor = textErrorColor
+    val redBadgeColor = MaterialTheme.colorScheme.error
     var quantity by remember { mutableStateOf(1) }
     var expanded by remember { mutableStateOf(false) }
     var selectedTime by remember { mutableStateOf("6:00 PM") }
@@ -940,7 +941,7 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundColor)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(bottom = innerPadding.calculateBottomPadding())
     ) {
@@ -960,15 +961,14 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
             //Title and restaurant name
             Text(
                 text = food.title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryTextColor
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Charlotte's Bakery",
                 fontSize = 14.sp,
-                color = SecondaryTextColor,
+                color = MaterialTheme.colorScheme.onSecondary,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -980,13 +980,13 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                     text = "RM ${"%.2f".format(food.getFinalPrice())}",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = PrimaryGreen
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "RM ${"%.2f".format(food.oriPrice)}",
                     fontSize = 14.sp,
-                    color = SecondaryTextColor,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     textDecoration = TextDecoration.LineThrough
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -996,9 +996,8 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                 ) {
                     Text(
                         text = "${food.discountPercentage}% OFF",
-                        color = BackgroundColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.background,
+                        style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -1008,9 +1007,11 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 20.dp),
+                    .padding(horizontal = 8.dp, vertical = 20.dp)
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 Box(modifier = Modifier.weight(1f)) {
                     InfoItem(title = "Quantity", value = "${food.quantity} left")
                 }
@@ -1026,9 +1027,8 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
             //Map
             Text(
                 text = "Restaurant Location",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryTextColor
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimary
             )
             Spacer(modifier = Modifier.height(12.dp))
             Image(
@@ -1053,23 +1053,22 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                 Text(
                     text = "No. 12 Jalan SS15/4, Subang Jaya",
                     fontSize = 13.sp,
-                    color = SecondaryTextColor
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
             //Reservation Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Make a Reservation",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryTextColor
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -1080,7 +1079,7 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                         Text(
                             text = "Quantity:",
                             fontSize = 14.sp,
-                            color = SecondaryTextColor,
+                            color = MaterialTheme.colorScheme.onSecondary,
                             modifier = Modifier.width(70.dp)
                         )
                         //minus button
@@ -1096,7 +1095,7 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                         }
                         Text(
                             text = quantity.toString(),
-                            color = PrimaryTextColor,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                             modifier = Modifier
@@ -1105,23 +1104,23 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                         )
                         //plus button
                         IconButton(
-                            onClick = { quantity++ }, // 真实情况可能还要判断库存上限
+                            onClick = { quantity++ },
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(SafeColor, shape = CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer, shape = CircleShape)
                         ) {
-                            Text("+", color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("+", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Pickup:", fontSize = 14.sp, color = SecondaryTextColor, modifier = Modifier.width(60.dp))
+                        Text(text = "Pickup:", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSecondary, modifier = Modifier.width(60.dp))
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                                 .clickable{expanded = true}
                                 .padding(horizontal = 12.dp, vertical = 12.dp)
                         ) {
@@ -1129,8 +1128,8 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = selectedTime, fontSize = 14.sp, color = PrimaryTextColor)
-                                Text(text = "▼", fontSize = 10.sp, color = Color.Gray) //fake dropdown arrow
+                                Text(text = selectedTime, fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimary)
+                                Text(text = "▼", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSecondary) //fake dropdown arrow
                             }
 
                             DropdownMenu(
@@ -1168,7 +1167,7 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                             Icon(
                                 painter = painterResource(R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24),
                                 contentDescription = "Warning",
-                                tint = PrimaryYellow,
+                                tint = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1189,10 +1188,10 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SecondaryGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = "Reserve Now", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = BackgroundColor)
+                        Text(text = "Reserve Now", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.background)
                     }
                 }
             }
@@ -1203,23 +1202,25 @@ fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackCli
 @Composable
 fun InfoItem(title: String, value: String) {
     Surface(
-        color = SafeColor.copy(alpha = 0.3f),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .height(72.dp)
             .border(
-                border = BorderStroke(1.dp, SecondaryGreen.copy(alpha = 0.5f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)),
                 shape = RoundedCornerShape(8.dp)
             )
-            .padding(horizontal = 4.dp)
+            .padding(horizontal = 2.dp)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
         ) {
-            Text(text = title, fontSize = 11.sp, color = SecondaryTextColor)
+            Text(text = title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondary, maxLines = 1)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryTextColor)
+            Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, textAlign = TextAlign.Center)
         }
     }
 }
@@ -1250,9 +1251,8 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
 
         Text(
             text = "Add Surplus Food",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = PrimaryTextColor
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.onPrimary
         )
 
         // Food Name
@@ -1269,7 +1269,7 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                 text = "Category",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryTextColor,
+                color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Box(modifier = Modifier.fillMaxWidth()) {
@@ -1280,7 +1280,7 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { categoryExpanded = true }
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp)), // 🔥 显式添加边框
+                        .border(1.dp, MaterialTheme.colorScheme.onTertiary, RoundedCornerShape(12.dp)),
                     shape = RoundedCornerShape(12.dp),
                     enabled = false,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1302,7 +1302,7 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                 DropdownMenu(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false },
-                    modifier = Modifier.background(Color.White)
+                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 ) {
                     categories.forEach { cat ->
                         DropdownMenuItem(
@@ -1341,7 +1341,7 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                 text = "Pickup Time Range",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryTextColor,
+                color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Row(
@@ -1357,14 +1357,14 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
-                        unfocusedContainerColor = Color.White
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onTertiary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.background
                     ),
                     trailingIcon = {
                         Icon(painterResource(R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24), contentDescription = "Time", tint = Color.Gray, modifier = Modifier.size(18.dp))
                     }
                 )
-                Text(text = "to", color = SecondaryTextColor, fontSize = 14.sp)
+                Text(text = "to", color = MaterialTheme.colorScheme.onSecondary, fontSize = 14.sp)
                 // End Time
                 OutlinedTextField(
                     value = "08:00 PM",
@@ -1373,7 +1373,7 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onTertiary,
                         unfocusedContainerColor = Color.White
                     ),
                     trailingIcon = {
@@ -1389,17 +1389,17 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                 text = "Food Image",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryTextColor,
+                color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             val stroke = Stroke(width = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f))
-            val greenColor = PrimaryGreen
+            val primaryColor = MaterialTheme.colorScheme.primary
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
-                    .drawBehind() { drawRoundRect(color = greenColor.copy(alpha = 0.4f), style = stroke, cornerRadius = CornerRadius(12.dp.toPx())) }
-                    .background(SafeColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                    .drawBehind() { drawRoundRect(color = primaryColor.copy(alpha = 0.4f), style = stroke, cornerRadius = CornerRadius(12.dp.toPx())) }
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                     .clickable { /* Handle Image Upload */ },
                 contentAlignment = Alignment.Center
             ) {
@@ -1407,11 +1407,11 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
                     Icon(
                         painter = painterResource(R.drawable.add_circle_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                         contentDescription = "Upload",
-                        tint = PrimaryGreen,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "Tap to upload image", color = PrimaryGreen, fontSize = 13.sp)
+                    Text(text = "Tap to upload image", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
                 }
             }
         }
@@ -1443,7 +1443,7 @@ fun AddFoodScreen(innerPadding: PaddingValues, navController: NavController) {
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(text = "Publish Food", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.background)
+            Text(text = "Publish Food", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.background)
         }
         if (showDialog) {
             AlertDialog(
@@ -1484,20 +1484,19 @@ fun FormField(
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = label,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = PrimaryTextColor,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(text = placeholder, color = Color.Gray, fontSize = 14.sp) },
+            placeholder = { Text(text = placeholder, color = MaterialTheme.colorScheme.onSecondary, style = MaterialTheme.typography.bodyLarge) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color(0xFFE2E8F0),
-                focusedBorderColor = PrimaryGreen,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedContainerColor = Color.White,
                 focusedContainerColor = Color.White
             ),
@@ -1509,7 +1508,6 @@ fun FormField(
 
 @Composable
 fun OrderScreen(innerPadding: PaddingValues, navController: NavController) {
-    // 这里直接使用全局的 reservationsList，不需要再定义一个局部的 reservations 变量
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1519,8 +1517,7 @@ fun OrderScreen(innerPadding: PaddingValues, navController: NavController) {
     ) {
         Text(
             text = "My Reservations",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -1528,7 +1525,6 @@ fun OrderScreen(innerPadding: PaddingValues, navController: NavController) {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 确保这里用的是 reservationsList
             items(reservationsList.size) { index ->
                 val reservation = reservationsList[index]
                 ReservationCard(
@@ -1558,7 +1554,7 @@ fun NotificationScreen(innerPadding: PaddingValues){
             text = "Notifications",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = PrimaryTextColor,
+            color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -1595,14 +1591,14 @@ fun NotificationScreen(innerPadding: PaddingValues){
                             Text(
                                 text = notification.title,
                                 fontSize = 14.sp,
-                                color = PrimaryTextColor,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 lineHeight = 20.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = notification.timeAgo,
-                                fontSize = 12.sp,
-                                color = SecondaryTextColor
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondary
                             )
                         }
                     }
@@ -1628,7 +1624,7 @@ fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavContro
                 )
                 //restaurant info
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Boulangerie Bakery", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+                    Text(text = "Boulangerie Bakery", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.height(12.dp))
                     RestaurantInfoRow(iconResId = R.drawable.location_on_24dp_e3e3e3_fill0_wght400_grad0_opsz24, text = "No. 12, Jalan SS15/4, Subang Jaya")
                     RestaurantInfoRow(iconResId = R.drawable.directions_run_24dp_cccccc_fill0_wght400_grad0_opsz24, text = "1.2 km away")
@@ -1637,7 +1633,7 @@ fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavContro
             }
 
             item {
-                Spacer(modifier = Modifier.fillMaxWidth().height(8.dp).background(Color(0xFFF1F5F9)))
+                Spacer(modifier = Modifier.fillMaxWidth().height(8.dp).background(MaterialTheme.colorScheme.outline))
             }
 
             //available surplus food header
@@ -1668,12 +1664,12 @@ fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavContro
 
                         Column(modifier = Modifier.weight(1f)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = food.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(text = food.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Surface(shape = RoundedCornerShape(6.dp), color = food.getBadgeColor()) {
                                     Text(text = "${food.discountPercentage}% OFF", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                                 }
                             }
-                            Text(text = food.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(text = food.description, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
                             Spacer(modifier = Modifier.height(8.dp))
 
@@ -1684,7 +1680,7 @@ fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavContro
 
                                 Spacer(modifier = Modifier.weight(1f))
 
-                                Text(text = "Only ${food.quantity} left", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Text(text = "Only ${food.quantity} left", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
                                 Icon(painter = painterResource(id = R.drawable.arrow_forward_24dp_cccccc_fill0_wght400_grad0_opsz24), contentDescription = null, tint = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
                             }
                         }
@@ -1720,7 +1716,7 @@ fun OrderDetailScreen(innerPadding: PaddingValues,navController: NavController, 
                     text = "Reservation Details",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = PrimaryTextColor
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -1736,8 +1732,7 @@ fun OrderDetailScreen(innerPadding: PaddingValues,navController: NavController, 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = order.foodName,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Black,
+                style = MaterialTheme.typography.headlineLarge,
                 lineHeight = 25.sp
             )
             Text(
@@ -1765,7 +1760,7 @@ fun OrderDetailScreen(innerPadding: PaddingValues,navController: NavController, 
 
             Text(text = "Pickup Details", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = order.address, fontSize = 14.sp)
+            Text(text = order.address, style = MaterialTheme.typography.bodyLarge)
             Text(text = order.pickupTimeRange, fontSize = 14.sp, fontWeight = FontWeight.Medium)
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -1787,7 +1782,7 @@ fun OrderDetailScreen(innerPadding: PaddingValues,navController: NavController, 
 
             Text(text = "YOUR RESERVATION CODE", modifier = Modifier.align(Alignment.CenterHorizontally), color = MaterialTheme.colorScheme.onSecondary, fontSize = 12.sp)
             Surface(
-                color = Color(0xFF1E293B),
+                color = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
@@ -1819,7 +1814,7 @@ fun AppNavigationBar(navController: NavController, isConsumer: Boolean ){
 
     NavigationBar(
         containerColor = Color.White,
-        modifier = Modifier.shadow(16.dp, spotColor = Color.Gray, ambientColor = Color.Gray)
+        modifier = Modifier.shadow(16.dp, spotColor = MaterialTheme.colorScheme.onSecondary, ambientColor = MaterialTheme.colorScheme.onSecondary)
     ) {
         NavigationBarItem(
             selected = selectedItem == "home",
@@ -2010,7 +2005,7 @@ fun ReservationCard(reservation: Reservation, onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(text = reservation.foodName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = reservation.foodName, style = MaterialTheme.typography.titleMedium)
                     Text(text = reservation.restaurantName, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSecondary)
                     Text(text = "Pickup: ${reservation.pickupTimeRange}", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                 }
