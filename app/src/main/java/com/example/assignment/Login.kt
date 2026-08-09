@@ -1,142 +1,119 @@
 package com.example.assignment
 
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.assignment.data.UserPreferences
+import com.example.assignment.model.User
+import com.example.assignment.screen.LoginScreen
 import com.example.assignment.ui.theme.AssignmentTheme
 
 class Login : ComponentActivity() {
 
-    private lateinit var sharedPref: SharedPreferences
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        sharedPref = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        UserPreferences.init(applicationContext)
 
         setContent {
             AssignmentTheme {
-                LoginScreen(
-                    onLoginClick = { email, password -> performLogin(email, password) },
-                    onRegisterClick = { startActivity(Intent(this, RegisterType::class.java)) }
-                )
+                var showDialog by remember { mutableStateOf(false) }
+                var dialogMessage by remember { mutableStateOf("") }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    LoginScreen(
+                        onLoginClick = { email, password ->
+                            performLogin(email, password) { success, message, user ->
+                                if (success && user != null) {
+                                    // Login successful → go to MainActivity
+                                    val intent = Intent(this@Login, MainActivity::class.java)
+                                    intent.putExtra("role", user.type)
+                                    intent.putExtra("username", user.name)
+                                    startActivity(intent)
+                                    finish()
+                                } else {
+                                    // Login failed → show error dialog
+                                    dialogMessage = message ?: "Login failed"
+                                    showDialog = true
+                                }
+                            }
+                        },
+                        onRegisterClick = {
+                            startActivity(Intent(this@Login, RegisterType::class.java))
+                        }
+                    )
+                }
+
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = { Text("Login Failed") },
+                        text = { Text(dialogMessage) },
+                        confirmButton = {
+                            TextButton(onClick = { showDialog = false }) {
+                                Text("OK")
+                            }
+                        }
+                    )
+                }
             }
         }
     }
 
-    private fun performLogin(email: String, password: String) {
-        if (email.isEmpty() || password.isEmpty()) {
-            android.widget.Toast.makeText(this, "Please enter email and password", android.widget.Toast.LENGTH_SHORT).show()
+    private fun performLogin(
+        email: String,
+        password: String,
+        onResult: (Boolean, String?, User?) -> Unit
+    ) {
+        val trimmedEmail = email.trim()
+        val trimmedPassword = password.trim()
+
+        // Empty field check
+        if (trimmedEmail.isEmpty() || trimmedPassword.isEmpty()) {
+            onResult(false, "Please enter email and password", null)
             return
         }
 
-        val savedPassword = sharedPref.getString("password_$email", null)
-        if (savedPassword != null && savedPassword == password) {
-            val userType = sharedPref.getString("type_$email", "FoodSaver") ?: "FoodSaver"
-            val userName = sharedPref.getString("name_$email", "") ?: ""
+        // Debug logs
+        Log.d("LoginDebug", "Input email: '$trimmedEmail'")
+        Log.d("LoginDebug", "Input password: '$trimmedPassword'")
 
-            android.widget.Toast.makeText(this, "Welcome back, $userName!", android.widget.Toast.LENGTH_SHORT).show()
+        // Fetch user from SharedPreferences
+        val user = UserPreferences.getUser(trimmedEmail)
 
-            val intent = Intent(this, MainActivity::class.java)
-            intent.putExtra("role", userType)
-            intent.putExtra("username", userName)
-            startActivity(intent)
-            finish()
+        if (user != null) {
+            Log.d("LoginDebug", "User found: ${user.name}")
+            Log.d("LoginDebug", "Stored password: '${user.password}'")
+            Log.d("LoginDebug", "Password match: ${user.password == trimmedPassword}")
         } else {
-            android.widget.Toast.makeText(this, "Invalid email or password", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
-@Composable
-fun LoginScreen(onLoginClick: (String, String) -> Unit, onRegisterClick: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.logo), // 替换为您的 logo
-            contentDescription = "Logo",
-            modifier = Modifier.size(120.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Welcome Back", fontSize = 28.sp, style = MaterialTheme.typography.headlineMedium)
-        Text(text = "Sign in to continue saving food", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(32.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email Address") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                if (email.isEmpty() || password.isEmpty()) {
-                    android.widget.Toast.makeText(context, "Please fill all fields", android.widget.Toast.LENGTH_SHORT).show()
-                } else {
-                    onLoginClick(email, password)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Text(text = "Login", fontSize = 16.sp, color = Color.White)
+            Log.d("LoginDebug", "User not found: $trimmedEmail")
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Don't have an account?",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            TextButton(onClick = onRegisterClick) {
-                Text(
-                    "Register",
-                    color = MaterialTheme.colorScheme.primary,  // 绿色
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        // Validate credentials
+        if (user != null && user.password == trimmedPassword) {
+            Toast.makeText(this, "Welcome ${user.name}!", Toast.LENGTH_SHORT).show()
+            onResult(true, null, user)
+        } else {
+            onResult(false, "Invalid email or password", null)
         }
     }
 }

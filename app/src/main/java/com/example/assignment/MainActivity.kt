@@ -93,9 +93,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val role = intent.getStringExtra("role") ?: "FoodSaver"
+        val username = intent.getStringExtra("username") ?: "User"
         setContent {
             AssignmentTheme {
-                MainApp()
+                MainApp(role = role, username = username)
 
             }
         }
@@ -148,9 +150,9 @@ val reservationsList = listOf(
 )
 
 @Composable
-fun MainApp(){
+fun MainApp(role: String, username: String){
     val navController = rememberNavController()
-    val isConsumer = true
+    val isConsumer = role == "FoodSaver"
 
     Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = { AppNavigationBar(navController, isConsumer) })
     { innerPadding ->
