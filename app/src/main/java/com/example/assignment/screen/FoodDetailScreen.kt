@@ -57,7 +57,7 @@ import com.example.assignment.ui.theme.SecondaryGreen
 import com.example.assignment.ui.theme.SecondaryYellow
 
 @Composable
-fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBlackClick:()-> Unit){
+fun FoodDetailScreen(innerPadding: PaddingValues, food: HomeFoodItem, onBackClick:()-> Unit){
     val redBadgeColor = MaterialTheme.colorScheme.error
     var quantity by remember { mutableStateOf(1) }
     var expanded by remember { mutableStateOf(false) }
