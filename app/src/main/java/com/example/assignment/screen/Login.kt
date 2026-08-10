@@ -1,9 +1,9 @@
-package com.example.assignment
+package com.example.assignment.screen
 
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -21,6 +21,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.assignment.MainActivity
+import com.example.assignment.R
 import com.example.assignment.ui.theme.AssignmentTheme
 
 class Login : ComponentActivity() {
@@ -29,7 +31,7 @@ class Login : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        sharedPref = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        sharedPref = getSharedPreferences("UserPrefs", MODE_PRIVATE)
 
         setContent {
             AssignmentTheme {
@@ -43,7 +45,7 @@ class Login : ComponentActivity() {
 
     private fun performLogin(email: String, password: String) {
         if (email.isEmpty() || password.isEmpty()) {
-            android.widget.Toast.makeText(this, "Please enter email and password", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please enter email and password", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -52,7 +54,7 @@ class Login : ComponentActivity() {
             val userType = sharedPref.getString("type_$email", "FoodSaver") ?: "FoodSaver"
             val userName = sharedPref.getString("name_$email", "") ?: ""
 
-            android.widget.Toast.makeText(this, "Welcome back, $userName!", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Welcome back, $userName!", Toast.LENGTH_SHORT).show()
 
             val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("role", userType)
@@ -60,7 +62,7 @@ class Login : ComponentActivity() {
             startActivity(intent)
             finish()
         } else {
-            android.widget.Toast.makeText(this, "Invalid email or password", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Invalid email or password", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -110,7 +112,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit, onRegisterClick: () -> U
         Button(
             onClick = {
                 if (email.isEmpty() || password.isEmpty()) {
-                    android.widget.Toast.makeText(context, "Please fill all fields", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                 } else {
                     onLoginClick(email, password)
                 }

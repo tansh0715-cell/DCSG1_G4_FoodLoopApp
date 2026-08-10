@@ -1,5 +1,6 @@
-package com.example.assignment
+package com.example.assignment.screen
 
+import android.R
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -56,7 +57,7 @@ fun RegisterTypeScreen(
         ) {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    painter = painterResource(id = android.R.drawable.ic_menu_revert),
+                    painter = painterResource(id = R.drawable.ic_menu_revert),
                     contentDescription = "Back"
                 )
             }
@@ -65,7 +66,7 @@ fun RegisterTypeScreen(
                 fontSize = 19.sp,
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.width(48.dp))
         }
@@ -113,7 +114,7 @@ fun RegisterTypeScreen(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.foodsaver),
+                        painter = painterResource(id = com.example.assignment.R.drawable.foodsaver),
                         contentDescription = "Food Saver",
                         modifier = Modifier.size(48.dp)
                     )
@@ -161,7 +162,7 @@ fun RegisterTypeScreen(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.foodprovider),
+                        painter = painterResource(id = com.example.assignment.R.drawable.foodprovider),
                         contentDescription = "Food Provider",
                         modifier = Modifier.size(48.dp)
                     )

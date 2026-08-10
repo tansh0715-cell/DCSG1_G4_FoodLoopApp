@@ -1,31 +1,22 @@
-package com.example.assignment
+package com.example.assignment.screen
 
-import android.content.Context
+import android.R
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,83 +24,68 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.assignment.ui.theme.AssignmentTheme
 
-class RegisterProvider : ComponentActivity() {
+class RegisterSaver : ComponentActivity() {
 
     private lateinit var sharedPref: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        sharedPref = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        sharedPref = getSharedPreferences("UserPrefs", MODE_PRIVATE)
 
         setContent {
             AssignmentTheme {
-                RegisterProviderScreen(
+                RegisterSaverScreen(
                     onBackClick = { finish() },
-                    onRegisterClick = { restaurant, email, phone, address, password, confirmPassword, imageUri ->
-                        performRegister(restaurant, email, phone, address, password, confirmPassword, imageUri)
+                    onRegisterClick = { name, email, phone, password, confirmPassword ->
+                        performRegister(name, email, phone, password, confirmPassword)
                     }
                 )
             }
         }
     }
 
-    private fun performRegister(restaurant: String, email: String, phone: String, address: String, password: String, confirmPassword: String, imageUri: Uri?) {
-        if (restaurant.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-            android.widget.Toast.makeText(this, "Please fill all fields", android.widget.Toast.LENGTH_SHORT).show()
+    private fun performRegister(name: String, email: String, phone: String, password: String, confirmPassword: String) {
+        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
             return
         }
         if (password != confirmPassword) {
-            android.widget.Toast.makeText(this, "Passwords do not match", android.widget.Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (imageUri == null) {
-            android.widget.Toast.makeText(this, "Please upload a license photo", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show()
             return
         }
 
         val existing = sharedPref.getString("password_$email", null)
         if (existing != null) {
-            android.widget.Toast.makeText(this, "Email already registered", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Email already registered", Toast.LENGTH_SHORT).show()
             return
         }
 
         val editor = sharedPref.edit()
         editor.putString("password_$email", password)
-        editor.putString("type_$email", "FoodProvider")
-        editor.putString("name_$email", restaurant)
-        editor.putString("restaurant_$email", restaurant)
+        editor.putString("type_$email", "FoodSaver")
+        editor.putString("name_$email", name)
         editor.putString("phone_$email", phone)
-        editor.putString("address_$email", address)
-        editor.putString("license_$email", imageUri.toString())
-        editor.commit()
+        editor.apply()
 
-        android.widget.Toast.makeText(this, "Registration successful! Please login.", android.widget.Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Registration successful! Please login.", Toast.LENGTH_LONG).show()
         startActivity(Intent(this, Login::class.java))
         finish()
     }
 }
 
 @Composable
-fun RegisterProviderScreen(
+fun RegisterSaverScreen(
     onBackClick: () -> Unit,
-    onRegisterClick: (restaurant: String, email: String, phone: String, address: String, password: String, confirmPassword: String, imageUri: Uri?) -> Unit
+    onRegisterClick: (name: String, email: String, phone: String, password: String, confirmPassword: String) -> Unit
 ) {
-    var restaurant by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
-
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri -> imageUri = uri }
-    )
 
     Column(
         modifier = Modifier
@@ -118,6 +94,7 @@ fun RegisterProviderScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -128,7 +105,7 @@ fun RegisterProviderScreen(
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
                 Icon(
-                    painter = painterResource(id = android.R.drawable.ic_menu_revert),
+                    painter = painterResource(id = R.drawable.ic_menu_revert),
                     contentDescription = "Back"
                 )
             }
@@ -143,22 +120,23 @@ fun RegisterProviderScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+
         Image(
-            painter = painterResource(id = R.drawable.foodprovider),
-            contentDescription = "Food Provider",
+            painter = painterResource(id = com.example.assignment.R.drawable.foodsaver),
+            contentDescription = "Food Saver",
             modifier = Modifier.size(80.dp)
         )
         Text(
-            text = "Food Provider",
+            text = "Food Saver",
             color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = restaurant,
-            onValueChange = { restaurant = it },
-            label = { Text("Restaurant Name") },
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Full Name") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -185,52 +163,6 @@ fun RegisterProviderScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = address,
-            onValueChange = { address = it },
-            label = { Text("Restaurant Address") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .background(
-                    color = Color.White,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .clickable { pickImageLauncher.launch("image/*") },
-            contentAlignment = Alignment.Center
-        ) {
-            if (imageUri != null) {
-                AsyncImage(
-                    model = imageUri,
-                    contentDescription = "License",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Text(
-                    text = "Upload your license",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
@@ -255,7 +187,7 @@ fun RegisterProviderScreen(
 
         Button(
             onClick = {
-                if (restaurant.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
                     Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
@@ -263,11 +195,7 @@ fun RegisterProviderScreen(
                     Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                if (imageUri == null) {
-                    Toast.makeText(context, "Please upload a license photo", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
-                onRegisterClick(restaurant, email, phone, address, password, confirmPassword, imageUri)
+                onRegisterClick(name, email, phone, password, confirmPassword)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
