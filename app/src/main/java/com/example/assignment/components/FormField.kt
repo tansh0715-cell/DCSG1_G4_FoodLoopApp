@@ -21,8 +21,29 @@ fun FormField(
     placeholder: String,
     modifier: Modifier = Modifier,
     singleLine: Boolean = true,
-    minLines: Int = 1
+    minLines: Int = 1,
+    errorMessage: String ?= null
 ) {
+    val isError = errorMessage != null
+    val isValid = errorMessage == null && value.isNotBlank()
+
+    val defaultBroader = Color(0xFFE2E8F0)
+    val focusedBorder = MaterialTheme.colorScheme.primary
+    val errorBorder = MaterialTheme.colorScheme.error
+    val successBorder = MaterialTheme.colorScheme.secondary
+
+    val currentUnfocusedBorder = when{
+        isError -> errorBorder
+        isValid -> successBorder
+        else -> defaultBroader
+    }
+
+    val currentForcusedBorder = when{
+        isError -> errorBorder
+        isValid -> successBorder
+        else -> focusedBorder
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -36,14 +57,27 @@ fun FormField(
             placeholder = { Text(text = placeholder, color = MaterialTheme.colorScheme.onSecondary, style = MaterialTheme.typography.bodyLarge) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
+            isError = isError,
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = Color(0xFFE2E8F0),
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = currentUnfocusedBorder,
+                focusedBorderColor = currentForcusedBorder,
+                errorBorderColor = errorBorder,
+
                 unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                focusedContainerColor = Color.White,
+                errorContainerColor = Color.White
             ),
             singleLine = singleLine,
             minLines = minLines
         )
+
+        if (isError) {
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
     }
 }

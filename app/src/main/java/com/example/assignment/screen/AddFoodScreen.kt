@@ -1,5 +1,6 @@
 package com.example.assignment.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +41,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,22 +51,30 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.components.FormField
+import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.viewmodel.AddFoodViewModel
 
 @Composable
 fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, viewModel: AddFoodViewModel = viewModel()) {
-    //if data in viewModel changes, the latest value auto retrieved & refresh UI
-    val foodName by viewModel.foodName.collectAsStateWithLifecycle()
-    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
-    val quantity by viewModel.quantity .collectAsStateWithLifecycle()
-    val description by viewModel.description .collectAsStateWithLifecycle()
-    val originalPrice by viewModel.oriPrice .collectAsStateWithLifecycle()
-    val selectedDiscount by viewModel.selectedDiscount.collectAsStateWithLifecycle()
-    val nameError by viewModel.nameError.collectAsStateWithLifecycle()
-    val priceError by viewModel.priceError.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val context = LocalContext.current
     var categoryExpanded by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when(event){
+                is AddFoodEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+                is AddFoodEvent.NavigateBack -> {
+                    navController.navigate("home"){
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -85,14 +96,14 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
         // Food Name
         FormField(
             label = "Food Name",
-            value = foodName,
-            onValueChange = { viewModel.onNameChange(it) },
+            value = uiState.foodName,
+            onValueChange = viewModel::onNameChange,
             placeholder = "Enter food name"
         )
 
-        if(nameError != null){
+        if(uiState.nameError != null){
             Text(
-                text = nameError!!,
+                text = uiState.nameError!!,
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp
             )
@@ -109,7 +120,7 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
             )
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = selectedCategory,
+                    value = uiState.selectedCategory,
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier
@@ -120,20 +131,18 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
                     enabled = false,
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color.Transparent,
-                        disabledTextColor = if (selectedCategory == "Select Category") MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary,
+                        disabledTextColor = if (uiState.selectedCategory == "Select Category") MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary,
                         disabledContainerColor = MaterialTheme.colorScheme.background
                     ),
                     trailingIcon = {
                         Text("▼", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSecondary, modifier = Modifier.padding(end = 12.dp))
                     }
                 )
-
                 Box(
                     modifier = Modifier
                         .matchParentSize()
                         .clickable { categoryExpanded = true }
                 )
-
                 DropdownMenu(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false },
@@ -155,16 +164,16 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
         // Quantity Available
         FormField(
             label = "Quantity Available",
-            value = quantity,
-            onValueChange = { viewModel.onQtyChange(it) },
+            value = uiState.quantity,
+            onValueChange = viewModel::onQtyChange,
             placeholder = "e.g. 5"
         )
 
         // Description
         FormField(
             label = "Description (Optional)",
-            value = description,
-            onValueChange = { viewModel.onDescriptionChange(it) },
+            value = uiState.description,
+            onValueChange = viewModel::onDescriptionChange,
             placeholder = "Optional",
             singleLine = false,
             minLines = 3
@@ -253,22 +262,22 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
 
         FormField(
             label = "Original Price (RM)",
-            value = originalPrice,
-            onValueChange = { viewModel.onPriceChange(it) },
+            value = uiState.originalPrice,
+            onValueChange = viewModel::onPriceChange,
             placeholder = "RM 0.00"
         )
 
         FormField(
             label = "Discount Percentage (%)",
-            value = selectedDiscount,
-            onValueChange = { viewModel.onDiscountChange(it) },
+            value = uiState.selectedDiscount,
+            onValueChange = viewModel::onDiscountChange,
             placeholder = "e.g. 50"
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { if(viewModel.submitFood()) showDialog = true },
+            onClick = { viewModel.submitFood() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -279,25 +288,21 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
         }
 
         //confirm dialog
-        if (showDialog) {
+        if (uiState.showConfirmDialog) {
             AlertDialog(
-                onDismissRequest = { showDialog = false },
+                onDismissRequest = { viewModel.dismissDialog() },
                 title = { Text("Confirm Publish") },
                 text = { Text("Are you sure you want to publish this surplus food?") },
                 confirmButton = {
                     Button(
-                        onClick = {
-                            showDialog = false
-                            viewModel.confirmPublish()
-                            // back to home
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = true }
-                            }
-                        }
-                    ) { Text("Confirm", color = MaterialTheme.colorScheme.background) }
+                        onClick = { viewModel.confirmPublish()}
+                    ) {
+                        Text("Confirm", color = MaterialTheme.colorScheme.background
+                        )
+                    }
                 },
                 dismissButton = {
-                    Button(onClick = { showDialog = false }) { Text("Cancel",color = MaterialTheme.colorScheme.background) }
+                    Button(onClick = { viewModel.dismissDialog() }) { Text("Cancel",color = MaterialTheme.colorScheme.background) }
                 }
             )
         }
