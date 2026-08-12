@@ -38,7 +38,7 @@ fun FormField(
         else -> defaultBroader
     }
 
-    val currentForcusedBorder = when{
+    val currentFocusedBorder = when{
         isError -> errorBorder
         isValid -> successBorder
         else -> focusedBorder
@@ -60,7 +60,7 @@ fun FormField(
             isError = isError,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = currentUnfocusedBorder,
-                focusedBorderColor = currentForcusedBorder,
+                focusedBorderColor = currentFocusedBorder,
                 errorBorderColor = errorBorder,
 
                 unfocusedContainerColor = Color.White,
@@ -73,7 +73,7 @@ fun FormField(
 
         if (isError) {
             Text(
-                text = errorMessage!!,
+                text = errorMessage,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)

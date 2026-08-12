@@ -264,7 +264,8 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
             label = "Original Price (RM)",
             value = uiState.originalPrice,
             onValueChange = viewModel::onPriceChange,
-            placeholder = "RM 0.00"
+            placeholder = "RM 0.00",
+            errorMessage = uiState.priceError
         )
 
         FormField(
