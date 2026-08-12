@@ -50,6 +50,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.components.StatCard
@@ -61,9 +63,11 @@ import com.example.assignment.ui.theme.BackgroundColor
 import com.example.assignment.ui.theme.PrimaryGreen
 import com.example.assignment.ui.theme.SafeColor
 import com.example.assignment.ui.theme.SecondaryGreen
+import com.example.assignment.viewmodel.HomeViewModel
 
 @Composable
-fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
+fun HomeScreen(innerPadding: PaddingValues, navController: NavController, viewModel: HomeViewModel = viewModel() ){
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     //Dummy data:
     //Nearby restaurant
     val restaurant = listOf(
@@ -188,12 +192,12 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController){
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(categories.size){ index ->
-                    val isSelected = selectedCategory == index
+                    val isSelected = uiState.selectedCategoryIndex == index
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = if (isSelected) PrimaryGreen else SafeColor,
                         modifier = Modifier.height(36.dp),
-                        onClick = { selectedCategory = index}
+                        onClick = { viewModel.onCategorySelected(index)}
                     ) {
                         Box(
                             contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)

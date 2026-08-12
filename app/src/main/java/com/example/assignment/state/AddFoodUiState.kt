@@ -1,7 +1,5 @@
 package com.example.assignment.state
 
-import android.os.Message
-
 data class AddFoodUiState(
     val foodName: String = "",
     val selectedCategory: String = "Select Category",

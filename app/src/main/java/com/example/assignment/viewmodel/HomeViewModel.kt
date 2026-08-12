@@ -8,11 +8,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class HomeUiState(
+    val isLoading: Boolean = false,
+    val foods: List<HomeFoodItem> = emptyList(),
+    val selectedCategoryIndex: Int = 0,
+    val categories: List<String> = listOf("All", "Meals", "Bakery", "Snacks")
+)
 class HomeViewModel: ViewModel() {
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     //store all the data fetched from the database without directly exposing it to the UI
     private var allFoods = emptyList<HomeFoodItem>()
@@ -27,25 +34,37 @@ class HomeViewModel: ViewModel() {
     }
 
     private fun loadFoods() {
-        viewModelScope.launch {
-            _isLoading.value = true
+        viewModelScope.launch{
+            _uiState.update {it.copy(isLoading = true)}
             delay(1500)
 
             allFoods = foodList
-            _foods.value = allFoods
 
-            _isLoading.value = false //data received --> stop loading
+            //data received --> stop loading
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    foods = allFoods
+                )
+            }
         }
     }
 
     fun onCategorySelected(index: Int){
-        _selectedCategoryIndex.value = index
-        if(index == 0){
-            _foods.value = allFoods
+        _uiState.update { it.copy(selectedCategoryIndex = index) }
+
+        //filter
+        val currentCategories = _uiState.value.categories
+        val selectedCategoryName = currentCategories[index]
+
+        val filteredList = if(index == 0){
+            allFoods
         }else{
-            //TODO: for future filter data feature
-            _foods.value = allFoods.take(1)
+            //TODO: for future filter data feature based on database
+            allFoods.take(1)
         }
+
+        _uiState.update { it.copy(foods=filteredList) }
     }
 
 }
