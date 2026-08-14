@@ -13,7 +13,7 @@
         android:theme="@style/Theme.Assignment">
 
         <activity
-            android:name=".screen.Login"
+            android:name=".MainActivity"
             android:exported="true"
             android:label="FoodLoop"
             android:theme="@style/Theme.Assignment">
@@ -23,31 +23,8 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".screen.RegisterType"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Assignment" />
-
-        <activity
-            android:name=".screen.RegisterSaver"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Assignment" />
-
-        <activity
-            android:name=".screen.RegisterProvider"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Assignment" />
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Assignment"
-            android:windowSoftInputMode="adjustResize" />
-
     </application>
 
 </manifest>
+
+
