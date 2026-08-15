@@ -66,7 +66,7 @@ import com.example.assignment.ui.theme.SecondaryGreen
 import com.example.assignment.viewmodel.HomeViewModel
 
 @Composable
-fun HomeScreen(innerPadding: PaddingValues, navController: NavController, viewModel: HomeViewModel = viewModel() ){
+fun HomeScreen(navController: NavController, viewModel: HomeViewModel = viewModel()){
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     //Dummy data:
     //Nearby restaurant
@@ -80,7 +80,6 @@ fun HomeScreen(innerPadding: PaddingValues, navController: NavController, viewMo
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(innerPadding)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {

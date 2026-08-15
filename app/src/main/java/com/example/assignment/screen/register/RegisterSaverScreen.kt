@@ -1,4 +1,4 @@
-package com.example.assignment.screen.login
+package com.example.assignment.screen.register
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,21 +11,24 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.assignment.state.UiState
-import com.example.assignment.viewmodel.LoginViewModel
+import com.example.assignment.viewmodel.RegisterSaverViewModel
 
 @Composable
-fun LoginScreen(
-    viewModel: LoginViewModel,
-    onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit
+fun RegisterSaverScreen(
+    viewModel: RegisterSaverViewModel,
+    onRegisterSuccess: () -> Unit,
+    onBack: () -> Unit
 ) {
+    val fullName by viewModel.fullName.collectAsStateWithLifecycle()
     val email by viewModel.email.collectAsStateWithLifecycle()
+    val phone by viewModel.phone.collectAsStateWithLifecycle()
     val password by viewModel.password.collectAsStateWithLifecycle()
+    val confirmPassword by viewModel.confirmPassword.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState) {
         if (uiState is UiState.Success) {
-            onLoginSuccess()
+            onRegisterSuccess()
             viewModel.resetState()
         }
     }
@@ -38,20 +41,23 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "FoodLoop",
-            style = MaterialTheme.typography.headlineLarge
+            "Create Account",
+            style = MaterialTheme.typography.headlineSmall
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Food Saver",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            "Welcome Back",
-            style = MaterialTheme.typography.titleLarge
+        OutlinedTextField(
+            value = fullName,
+            onValueChange = viewModel::updateFullName,
+            label = { Text("Full Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
-        Text(
-            "Sign in to continue saving food",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = email,
@@ -61,7 +67,17 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = viewModel::updatePhone,
+            label = { Text("Phone Number") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = password,
@@ -72,17 +88,28 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = viewModel::updateConfirmPassword,
+            label = { Text("Confirm Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = viewModel::login,
+            onClick = viewModel::register,
             enabled = uiState !is UiState.Loading,
             modifier = Modifier.fillMaxWidth()
         ) {
             if (uiState is UiState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp))
             } else {
-                Text("Login")
+                Text("Register")
             }
         }
 
@@ -96,12 +123,8 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        Row {
-            Text("Don't have an account? ")
-            TextButton(onClick = onNavigateToRegister) {
-                Text("Register")
-            }
+        TextButton(onClick = onBack) {
+            Text("Back")
         }
     }
 }

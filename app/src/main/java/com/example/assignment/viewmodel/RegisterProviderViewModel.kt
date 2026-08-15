@@ -1,81 +1,75 @@
 package com.example.assignment.viewmodel
 
-import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.assignment.data.repository.UserRepository
-import com.example.assignment.model.User
+import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.state.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed class RegisterProviderUiState {
-    object Idle : RegisterProviderUiState()
-    object Loading : RegisterProviderUiState()
-    object Success : RegisterProviderUiState()
-    data class Error(val message: String) : RegisterProviderUiState()
-}
+class RegisterProviderViewModel(private val authRepo: AuthRepository) : ViewModel() {
 
-class RegisterProviderViewModel(private val context: Context) : ViewModel() {
-    private val repository = UserRepository(context)
-    private val _uiState = MutableStateFlow<RegisterProviderUiState>(RegisterProviderUiState.Idle)
-    val uiState: StateFlow<RegisterProviderUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<UiState<Unit>>(UiState.Loading)
+    val uiState: StateFlow<UiState<Unit>> = _uiState.asStateFlow()
 
-    fun register(
-        restaurant: String,
-        email: String,
-        phone: String,
-        address: String,
-        password: String,
-        confirmPassword: String,
-        imageUri: Uri?
-    ) {
+    private val _restaurantName = MutableStateFlow("")
+    val restaurantName: StateFlow<String> = _restaurantName.asStateFlow()
+
+    private val _email = MutableStateFlow("")
+    val email: StateFlow<String> = _email.asStateFlow()
+
+    private val _phone = MutableStateFlow("")
+    val phone: StateFlow<String> = _phone.asStateFlow()
+
+    private val _address = MutableStateFlow("")
+    val address: StateFlow<String> = _address.asStateFlow()
+
+    private val _licenseUrl = MutableStateFlow("") // 模拟执照URL，实际需上传文件获得
+    val licenseUrl: StateFlow<String> = _licenseUrl.asStateFlow()
+
+    private val _password = MutableStateFlow("")
+    val password: StateFlow<String> = _password.asStateFlow()
+
+    private val _confirmPassword = MutableStateFlow("")
+    val confirmPassword: StateFlow<String> = _confirmPassword.asStateFlow()
+
+    fun updateRestaurantName(input: String) { _restaurantName.value = input }
+    fun updateEmail(input: String) { _email.value = input }
+    fun updatePhone(input: String) { _phone.value = input }
+    fun updateAddress(input: String) { _address.value = input }
+    fun updateLicenseUrl(url: String) { _licenseUrl.value = url }
+    fun updatePassword(input: String) { _password.value = input }
+    fun updateConfirmPassword(input: String) { _confirmPassword.value = input }
+
+    fun register() {
+        if (_password.value != _confirmPassword.value) {
+            _uiState.value = UiState.Error("[X] Passwords don't match.")
+            return
+        }
+        if (_password.value.length < 6) {
+            _uiState.value = UiState.Error("[>_<] Password must be at least 6 characters long.")
+            return
+        }
         viewModelScope.launch {
-            val trimmedRestaurant = restaurant.trim()
-            val trimmedEmail = email.trim()
-            val trimmedPhone = phone.trim()
-            val trimmedAddress = address.trim()
-            val trimmedPassword = password.trim()
-            val trimmedConfirm = confirmPassword.trim()
-
-            if (trimmedRestaurant.isEmpty() || trimmedEmail.isEmpty() || trimmedPhone.isEmpty() || trimmedAddress.isEmpty() || trimmedPassword.isEmpty() || trimmedConfirm.isEmpty()) {
-                _uiState.value = RegisterProviderUiState.Error("Please fill in all fields")
-                return@launch
-            }
-            if (trimmedPassword != trimmedConfirm) {
-                _uiState.value = RegisterProviderUiState.Error("Passwords do not match")
-                return@launch
-            }
-            if (imageUri == null) {
-                _uiState.value = RegisterProviderUiState.Error("Please upload a license photo")
-                return@launch
-            }
-
-            _uiState.value = RegisterProviderUiState.Loading
-            val user = User(
-                email = trimmedEmail,
-                name = trimmedRestaurant,
-                password = trimmedPassword,
-                phone = trimmedPhone,
-                type = "FoodProvider",
-                restaurant = trimmedRestaurant,
-                address = trimmedAddress,
-                licenseUri = imageUri.toString()
+            _uiState.value = UiState.Loading
+            val result = authRepo.registerProvider(
+                email = _email.value,
+                password = _password.value,
+                restaurantName = _restaurantName.value,
+                phone = _phone.value,
+                address = _address.value,
+                licenseUrl = _licenseUrl.value
             )
-            val result = repository.registerUser(user)
-            if (result.isSuccess) {
-                _uiState.value = RegisterProviderUiState.Success
-            } else {
-                _uiState.value = RegisterProviderUiState.Error(
-                    result.exceptionOrNull()?.message ?: "Registration failed"
-                )
-            }
+            _uiState.value = result.fold(
+                onSuccess = { UiState.Success(Unit) },
+                onFailure = { UiState.Error(it.message ?: ":( Registration failed, please try again.") }
+            )
         }
     }
 
     fun resetState() {
-        _uiState.value = RegisterProviderUiState.Idle
+        _uiState.value = UiState.Loading
     }
 }
