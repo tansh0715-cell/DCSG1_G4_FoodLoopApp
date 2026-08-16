@@ -23,11 +23,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +48,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,25 +58,51 @@ import com.example.assignment.R
 import com.example.assignment.components.FormField
 import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.viewmodel.AddFoodViewModel
+import java.sql.Time
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, viewModel: AddFoodViewModel = viewModel()) {
+fun AddFoodScreen(
+    navController: NavController,
+    innerPadding: PaddingValues,
+    viewModel: AddFoodViewModel,
+    onNavigateBack: () -> Unit = {navController.popBackStack()}
+) {
+    //observe viewmodel state
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     val context = LocalContext.current
-    var categoryExpanded by remember { mutableStateOf(false) }
 
+    //local ui states
+    var selectedStartTime by remember { mutableStateOf("") }
+    var selectedEndTime by remember { mutableStateOf("") }
+
+    //sync pickupTime from UiState
+    LaunchedEffect(uiState.pickupTime) {
+        val parts = uiState.pickupTime.split(" - ")
+        if (parts.size == 2) {
+            selectedStartTime = parts[0].trim()
+            selectedEndTime = parts[1].trim()
+        } else if (uiState.pickupTime.isBlank()) {
+            selectedStartTime = ""
+            selectedEndTime = ""
+        }
+    }
+
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+
+    //One-time event collector for success/error messages and navigation
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when(event){
                 is AddFoodEvent.ShowToast -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
-                is AddFoodEvent.NavigateBack -> {
-                    navController.navigate("home"){
-                        popUpTo("home") { inclusive = true }
-                    }
-                }
+                AddFoodEvent.NavigateBack -> onNavigateBack()
             }
         }
     }
@@ -88,7 +119,7 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Add Surplus Food",
+            text = if (viewModel.editingFoodId == null) "Add Surplus Food" else "Edit Surplus Food",
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onPrimary
         )
@@ -125,10 +156,8 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
                     readOnly = true,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { categoryExpanded = true }
                         .border(1.dp, MaterialTheme.colorScheme.onTertiary, RoundedCornerShape(12.dp)),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = false,
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledBorderColor = Color.Transparent,
                         disabledTextColor = if (uiState.selectedCategory == "Select Category") MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary,
@@ -159,6 +188,14 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
                     }
                 }
             }
+            uiState.categoryError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
 
         // Quantity Available
@@ -166,7 +203,9 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
             label = "Quantity Available",
             value = uiState.quantity,
             onValueChange = viewModel::onQtyChange,
-            placeholder = "e.g. 5"
+            placeholder = "e.g. 5",
+            errorMessage = uiState.qtyError,
+            keyboardType = KeyboardType.Number
         )
 
         // Description
@@ -195,34 +234,70 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
             ) {
                 // Start Time
                 OutlinedTextField(
-                    value = "06:00 PM",
+                    value = selectedStartTime,
                     onValueChange = {},
                     readOnly = true,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable{
+                            showStartTimePicker = true
+                        },
+                    placeholder = {
+                        Text("Start Time")
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = MaterialTheme.colorScheme.onTertiary,
                         unfocusedContainerColor = MaterialTheme.colorScheme.background
                     ),
                     trailingIcon = {
-                        Icon(painterResource(R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24), contentDescription = "Time", tint = Color.Gray, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(
+                            R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24),
+                            contentDescription = "Select start time",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 )
-                Text(text = "to", color = MaterialTheme.colorScheme.onSecondary, fontSize = 14.sp)
+                Text(
+                    text = "to",
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    fontSize = 14.sp
+                )
                 // End Time
                 OutlinedTextField(
-                    value = "08:00 PM",
+                    value = selectedEndTime,
                     onValueChange = {},
                     readOnly = true,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable{
+                            showEndTimePicker = true
+                        },
+                    placeholder = {
+                        Text("End time")
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = MaterialTheme.colorScheme.onTertiary,
                         unfocusedContainerColor = Color.White
                     ),
                     trailingIcon = {
-                        Icon(painterResource(R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24), contentDescription = "Time", tint = Color.Gray, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(
+                            R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24),
+                            contentDescription = "Time",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
+                )
+            }
+            uiState.pickupTimeError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
@@ -265,14 +340,16 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
             value = uiState.originalPrice,
             onValueChange = viewModel::onPriceChange,
             placeholder = "RM 0.00",
-            errorMessage = uiState.priceError
+            errorMessage = uiState.priceError,
+            keyboardType = KeyboardType.Decimal
         )
 
         FormField(
             label = "Discount Percentage (%)",
             value = uiState.selectedDiscount,
             onValueChange = viewModel::onDiscountChange,
-            placeholder = "e.g. 50"
+            placeholder = "e.g. 50",
+            keyboardType = KeyboardType.Number
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -285,29 +362,148 @@ fun AddFoodScreen(navController: NavController,innerPadding: PaddingValues, view
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(text = "Publish Food", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.background)
+            Text(
+                text = if (viewModel.editingFoodId == null) "Publish Food" else "Update Food",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.background
+            )
         }
 
         //confirm dialog
         if (uiState.showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissDialog() },
-                title = { Text("Confirm Publish") },
-                text = { Text("Are you sure you want to publish this surplus food?") },
+                title = {
+                    Text(
+                        if (viewModel.editingFoodId == null) "Confirm Publish"
+                        else "Confirm Update"
+                    )
+                },
+                text = {
+                    Text(
+                        if (viewModel.editingFoodId == null)
+                            "Are you sure you want to publish this surplus food?"
+                        else
+                            "Are you sure you want to update this food listing?"
+                    )
+                },
                 confirmButton = {
-                    Button(
-                        onClick = { viewModel.confirmPublish()}
-                    ) {
-                        Text("Confirm", color = MaterialTheme.colorScheme.background
-                        )
+                    Button(onClick = { viewModel.confirmPublish() }) {
+                        Text("Confirm", color = MaterialTheme.colorScheme.background)
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { viewModel.dismissDialog() }) { Text("Cancel",color = MaterialTheme.colorScheme.background) }
+                    Button(onClick = { viewModel.dismissDialog() }) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.background)
+                    }
+                }
+            )
+        }
+
+        //start time picker
+        if (showStartTimePicker) {
+            val initial = parsePickerTime(selectedStartTime)
+            val timePickerState = rememberTimePickerState(
+                initialHour = initial?.first ?: LocalTime.now().hour,
+                initialMinute = initial?.second ?: LocalTime.now().minute,
+                is24Hour = false
+            )
+
+            AlertDialog(
+                onDismissRequest = { showStartTimePicker = false },
+                title = { Text("Select Start Time") },
+                text = { TimePicker(state = timePickerState) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            selectedStartTime = formatPickerTime(
+                                timePickerState.hour,
+                                timePickerState.minute
+                            )
+                            showStartTimePicker = false
+
+                            if (selectedEndTime.isNotBlank()) {
+                                viewModel.onPickupTimeChange(
+                                    "$selectedStartTime - $selectedEndTime"
+                                )
+                            }
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showStartTimePicker = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showEndTimePicker) {
+            val initial = parsePickerTime(selectedEndTime)
+            val timePickerState = rememberTimePickerState(
+                initialHour = initial?.first ?: LocalTime.now().hour,
+                initialMinute = initial?.second ?: LocalTime.now().minute,
+                is24Hour = false
+            )
+
+            AlertDialog(
+                onDismissRequest = { showEndTimePicker = false },
+                title = { Text("Select End Time") },
+                text = { TimePicker(state = timePickerState) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            selectedEndTime = formatPickerTime(
+                                timePickerState.hour,
+                                timePickerState.minute
+                            )
+                            showEndTimePicker = false
+
+                            if (selectedStartTime.isNotBlank()) {
+                                viewModel.onPickupTimeChange(
+                                    "$selectedStartTime - $selectedEndTime"
+                                )
+                            }
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEndTimePicker = false }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+private fun formatPickerTime(hour: Int, minute: Int): String {
+    val amPm = if (hour < 12) "AM" else "PM"
+    val displayHour = if (hour % 12 == 0) 12 else hour % 12
+
+    return String.format(
+        Locale.ENGLISH,
+        "%02d:%02d %s",
+        displayHour,
+        minute,
+        amPm
+    )
+}
+
+private fun parsePickerTime(value: String): Pair<Int, Int>? {
+    if (value.isBlank()) return null
+
+    return try {
+        val formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
+        val time = LocalTime.parse(value.trim(), formatter)
+        time.hour to time.minute
+    } catch (_: Exception) {
+        null
     }
 }

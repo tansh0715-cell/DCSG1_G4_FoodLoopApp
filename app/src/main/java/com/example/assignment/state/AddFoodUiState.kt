@@ -8,12 +8,14 @@ data class AddFoodUiState(
     val originalPrice: String = "",
     val selectedDiscount: String = "",
 
+    val pickupTime: String  = "",
+
     val nameError: String? = null,
     val categoryError: String? = null,
     val qtyError: String? = null,
     val priceError: String? = null,
+    val pickupTimeError: String? = null,
 
-    val isLoading: Boolean = false,
     val showConfirmDialog: Boolean = false
 )
 

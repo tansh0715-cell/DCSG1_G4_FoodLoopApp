@@ -1,7 +1,9 @@
 package com.example.assignment.model
 
 data class Restaurant(
-    val imageResId: Int, //tell the card which image to look for in the drawable resources
+    val id: String,
     val name: String,
-    val distance: String
+    val location: String,
+    val latitude: Double,
+    val longitude: Double
 )

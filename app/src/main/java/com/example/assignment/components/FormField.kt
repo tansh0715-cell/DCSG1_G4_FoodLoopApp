@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -11,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -22,7 +24,8 @@ fun FormField(
     modifier: Modifier = Modifier,
     singleLine: Boolean = true,
     minLines: Int = 1,
-    errorMessage: String ?= null
+    errorMessage: String ?= null,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     val isError = errorMessage != null
     val isValid = errorMessage == null && value.isNotBlank()
@@ -68,7 +71,8 @@ fun FormField(
                 errorContainerColor = Color.White
             ),
             singleLine = singleLine,
-            minLines = minLines
+            minLines = minLines,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
         )
 
         if (isError) {

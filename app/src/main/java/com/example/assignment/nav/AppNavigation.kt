@@ -3,19 +3,39 @@ package com.example.assignment.nav
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.supabase.AuthService
+import com.example.assignment.data.supabase.supabase
+import com.example.assignment.model.AccountType
+import com.example.assignment.model.FoodListing
+import com.example.assignment.screen.AddFoodScreen
+import com.example.assignment.screen.FoodDetailScreen
 import com.example.assignment.screen.HomeScreen
 import com.example.assignment.screen.ProviderHomeScreen
+import com.example.assignment.screen.RestaurantDetailScreen
+import com.example.assignment.screen.InventoryScreen
+import com.example.assignment.screen.OrderScreen
+import com.example.assignment.screen.ProviderOrderScreen
+import com.example.assignment.screen.ProfileScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.register.AccountTypeScreen
 import com.example.assignment.screen.register.RegisterProviderScreen
 import com.example.assignment.screen.register.RegisterSaverScreen
+import com.example.assignment.viewmodel.AddFoodViewModelFactory
+import com.example.assignment.viewmodel.HomeViewModel
+import com.example.assignment.viewmodel.HomeViewModelFactory
 import com.example.assignment.viewmodel.LoginViewModel
 import com.example.assignment.viewmodel.RegisterProviderViewModel
 import com.example.assignment.viewmodel.RegisterSaverViewModel
@@ -25,20 +45,36 @@ fun AppNavigation() {
     val navController: NavHostController = rememberNavController()
     val authService = remember { AuthService() }
     val authRepo = remember { AuthRepository(authService) }
+    val foodRepository = remember { FoodRepository(supabase) }
 
-    val startDestination = if (authRepo.getCurrentUser() != null) {
-        "home_saver"
-    } else {
-        "login"
+    val currentUser = authRepo.getCurrentUser()
+    val isProvider = currentUser?.userMetadata
+        ?.get("account_type")
+        ?.toString()
+        ?.trim('"') == AccountType.FOOD_PROVIDER.name
+
+    val startDestination = when {
+        currentUser == null -> "login"
+        isProvider -> "home_provider"
+        else -> "home_saver"
     }
 
-    NavHost(navController, startDestination = startDestination) {
+    NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
             LoginScreen(
                 viewModel = LoginViewModel(authRepo),
                 onNavigateToRegister = { navController.navigate("account_type") },
                 onLoginSuccess = {
-                    navController.navigate("home_saver") {
+                    // LoginScreen is unchanged. Role routing happens here using Supabase user metadata.
+                    val provider = authRepo.getCurrentUser()
+                        ?.userMetadata
+                        ?.get("account_type")
+                        ?.toString()
+                        ?.trim('"') == AccountType.FOOD_PROVIDER.name
+
+                    val destination = if (provider) "home_provider" else "home_saver"
+
+                    navController.navigate(destination) {
                         popUpTo("login") { inclusive = true }
                     }
                 }
@@ -52,7 +88,6 @@ fun AppNavigation() {
             )
         }
 
-        // 注册（食品拯救者)
         composable("register_saver") {
             RegisterSaverScreen(
                 viewModel = RegisterSaverViewModel(authRepo),
@@ -61,7 +96,6 @@ fun AppNavigation() {
             )
         }
 
-        // 注册（食品提供者
         composable("register_provider") {
             RegisterProviderScreen(
                 viewModel = RegisterProviderViewModel(authRepo),
@@ -70,21 +104,29 @@ fun AppNavigation() {
             )
         }
 
-        // 普通用户主页
+        // SAVER HOME: reads all real food listings from Supabase.
         composable("home_saver") {
-            val innerPadding = PaddingValues(0.dp)
+            val homeViewModel: HomeViewModel = viewModel(
+                factory = HomeViewModelFactory(foodRepository)
+            )
             HomeScreen(
-                innerPadding = innerPadding,
-                navController = navController
+                navController = navController,
+                viewModel = homeViewModel
             )
         }
 
-        // 商家主页
+        // PROVIDER HOME: reads only this provider's listings from Supabase.
         composable("home_provider") {
-            val innerPadding = PaddingValues(0.dp)
+            val providerId = authRepo.getCurrentUser()?.id.orEmpty()
+            val homeViewModel: HomeViewModel = viewModel(
+                factory = HomeViewModelFactory(foodRepository)
+            )
+
             ProviderHomeScreen(
-                innerPadding = innerPadding,
-                navController = navController
+                innerPadding = PaddingValues(0.dp),
+                navController = navController,
+                viewModel = homeViewModel,
+                providerId = providerId
             )
         }
 
@@ -92,18 +134,101 @@ fun AppNavigation() {
             Text("Notifications Screen")
         }
 
-        // 食品详情，参数为 foodIndex
-        composable("food_detail/{foodIndex}") { backStackEntry ->
-            val index = backStackEntry.arguments?.getString("foodIndex")?.toIntOrNull() ?: 0
-            Text("Food Detail for index $index")
+        composable("order") {
+            if (isProvider) {
+                ProviderOrderScreen(
+                    innerPadding = PaddingValues(0.dp),
+                    navController = navController
+                )
+            } else {
+                OrderScreen(
+                    innerPadding = PaddingValues(0.dp),
+                    navController = navController
+                )
+            }
         }
 
+        composable("inventory") {
+            InventoryScreen(PaddingValues(0.dp))
+        }
+
+        composable("profile") {
+            ProfileScreen(PaddingValues(0.dp))
+        }
+
+        // Food Detail now uses the real food UUID, not a dummy list index.
+        composable("food_detail/{foodId}") { backStackEntry ->
+            val foodId = backStackEntry.arguments?.getString("foodId")
+            var food by remember(foodId) { mutableStateOf<FoodListing?>(null) }
+            var error by remember(foodId) { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(foodId) {
+                if (foodId.isNullOrBlank()) {
+                    error = "Food listing not found"
+                    return@LaunchedEffect
+                }
+
+                try {
+                    food = foodRepository.getFoodListingById(foodId)
+                } catch (e: Exception) {
+                    error = e.message ?: "Failed to load food"
+                }
+            }
+
+            when {
+                food != null -> FoodDetailScreen(
+                    innerPadding = PaddingValues(0.dp),
+                    food = food!!,
+                    onBackClick = { navController.popBackStack() }
+                )
+                error != null -> Text(error!!)
+                else -> Text("Loading food...")
+            }
+        }
+
+        // ADD FOOD: create a new listing.
         composable("add") {
-            Text("Add Food Listing")
+            val providerId = authRepo.getCurrentUser()?.id.orEmpty()
+            val addFoodViewModel = viewModel<com.example.assignment.viewmodel.AddFoodViewModel>(
+                factory = AddFoodViewModelFactory(foodRepository, providerId)
+            )
+
+            AddFoodScreen(
+                navController = navController,
+                innerPadding = PaddingValues(0.dp),
+                viewModel = addFoodViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // EDIT FOOD: same FoodListing ID is loaded and preserved during upsert.
+        composable("add/{foodId}") { backStackEntry ->
+            val providerId = authRepo.getCurrentUser()?.id.orEmpty()
+            val foodId = backStackEntry.arguments?.getString("foodId")
+            val addFoodViewModel = viewModel<com.example.assignment.viewmodel.AddFoodViewModel>(
+                factory = AddFoodViewModelFactory(foodRepository, providerId)
+            )
+
+            LaunchedEffect(foodId) {
+                if (!foodId.isNullOrBlank()) {
+                    addFoodViewModel.loadFoodForEdit(foodId)
+                }
+            }
+
+            AddFoodScreen(
+                navController = navController,
+                innerPadding = PaddingValues(0.dp),
+                viewModel = addFoodViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable("restaurant_detail") {
-            Text("Restaurant Detail")
+            RestaurantDetailScreen(
+                innerPadding = PaddingValues(0.dp),
+                navController = navController,
+                foods = emptyList()
+            )
         }
     }
 }

@@ -40,7 +40,6 @@ import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.components.RestaurantInfoRow
 import com.example.assignment.data.restaurantSpecificFoods
-import com.example.assignment.model.HomeFoodItem
 
 @Composable
 fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavController) {

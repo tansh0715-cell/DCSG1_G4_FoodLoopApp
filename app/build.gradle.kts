@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.devtools.ksp)
+    //alias(libs.plugins.google.devtools.ksp)
 }
 
 android {
@@ -35,6 +35,10 @@ android {
 }
 
 dependencies {
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.4.3")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.4.3")
+    implementation("io.ktor:ktor-client-android:2.3.11")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -58,12 +62,12 @@ dependencies {
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    //ksp("androidx.room:room-compiler:2.6.1")
 
-    implementation(libs.supabase.bom)
-    implementation(libs.supabase.auth)
-    implementation(libs.supabase.postgrest)
-    implementation(libs.supabase.storage)
+    //implementation(libs.supabase.bom)
+    //implementation(libs.supabase.auth)
+    //implementation(libs.supabase.postgrest)
+    //implementation(libs.supabase.storage)
 
     implementation("io.ktor:ktor-client-android:2.3.7")
     implementation("io.ktor:ktor-client-json:2.3.7")
