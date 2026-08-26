@@ -1,40 +1,53 @@
 package com.example.assignment.viewmodel
 
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.assignment.data.repository.AuthRepository
-import com.example.assignment.state.UiState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class LoginViewModel(private val authRepo: AuthRepository) : ViewModel() {
+class LoginViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow<UiState<Unit>>(UiState.Loading)
-    val uiState: StateFlow<UiState<Unit>> = _uiState.asStateFlow()
+    var email by mutableStateOf("")
+    var password by mutableStateOf("")
+    var isLoading by mutableStateOf(false)
+    var toastMessage by mutableStateOf<String?>(null)
+    private val authRepository = AuthRepository()
 
-    private val _email = MutableStateFlow("")
-    val email: StateFlow<String> = _email.asStateFlow()
+    fun login(onSuccess: (String) -> Unit) {
+        if (email.isBlank() || password.isBlank()) {
+            toastMessage = "Please fill in all fields"
+            return
+        }
 
-    private val _password = MutableStateFlow("")
-    val password: StateFlow<String> = _password.asStateFlow()
-
-    fun updateEmail(input: String) { _email.value = input }
-    fun updatePassword(input: String) { _password.value = input }
-
-    fun login() {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            val result = authRepo.login(_email.value, _password.value)
-            _uiState.value = result.fold(
-                onSuccess = { UiState.Success(Unit) },
-                onFailure = { UiState.Error(it.message ?: "Login failed, please check your email/password") }
-            )
+            isLoading = true
+            try {
+                val accountType = authRepository.login(
+                    email = email.trim().lowercase(),
+                    password = password
+                )
+                when (accountType) {
+                    "FOOD_SAVER" -> onSuccess("FOOD_SAVER")
+                    "FOOD_PROVIDER" -> onSuccess("FOOD_PROVIDER")
+                    else -> {
+                        toastMessage = "Account type is not found"
+                    }
+                }
+            } catch (e: Exception) {
+                // 保留了你原代码里的 Log.e
+                Log.e("Login", "Login failed", e)
+                toastMessage = "Login failed. Please check your email or password."
+            } finally {
+                isLoading = false
+            }
         }
     }
 
-    fun resetState() {
-        _uiState.value = UiState.Loading
+    fun clearToast() {
+        toastMessage = null
     }
 }

@@ -52,13 +52,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.components.FormField
 import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.viewmodel.AddFoodViewModel
-import java.sql.Time
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -71,15 +69,12 @@ fun AddFoodScreen(
     viewModel: AddFoodViewModel,
     onNavigateBack: () -> Unit = {navController.popBackStack()}
 ) {
-    //observe viewmodel state
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    //local ui states
     var selectedStartTime by remember { mutableStateOf("") }
     var selectedEndTime by remember { mutableStateOf("") }
 
-    //sync pickupTime from UiState
     LaunchedEffect(uiState.pickupTime) {
         val parts = uiState.pickupTime.split(" - ")
         if (parts.size == 2) {
@@ -95,7 +90,6 @@ fun AddFoodScreen(
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
-    //One-time event collector for success/error messages and navigation
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when(event){
@@ -198,7 +192,6 @@ fun AddFoodScreen(
             }
         }
 
-        // Quantity Available
         FormField(
             label = "Quantity Available",
             value = uiState.quantity,
@@ -208,7 +201,6 @@ fun AddFoodScreen(
             keyboardType = KeyboardType.Number
         )
 
-        // Description
         FormField(
             label = "Description (Optional)",
             value = uiState.description,
@@ -218,7 +210,6 @@ fun AddFoodScreen(
             minLines = 3
         )
 
-        // Pickup Time Range
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Pickup Time Range",
@@ -232,7 +223,6 @@ fun AddFoodScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Start Time
                 OutlinedTextField(
                     value = selectedStartTime,
                     onValueChange = {},
@@ -264,7 +254,6 @@ fun AddFoodScreen(
                     color = MaterialTheme.colorScheme.onSecondary,
                     fontSize = 14.sp
                 )
-                // End Time
                 OutlinedTextField(
                     value = selectedEndTime,
                     onValueChange = {},
@@ -302,7 +291,6 @@ fun AddFoodScreen(
             }
         }
 
-        // doted line frame (food upload)
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Food Image",
