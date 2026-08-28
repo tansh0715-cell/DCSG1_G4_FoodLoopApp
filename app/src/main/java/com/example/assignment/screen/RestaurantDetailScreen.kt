@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.components.RestaurantInfoRow
-import com.example.assignment.data.restaurantSpecificFoods
+/*
 
 @Composable
 fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavController) {
@@ -122,4 +122,4 @@ fun RestaurantDetailScreen(innerPadding: PaddingValues, navController: NavContro
             }
         }
     }
-}
+}*/

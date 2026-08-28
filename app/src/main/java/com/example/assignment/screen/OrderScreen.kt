@@ -38,10 +38,9 @@ import com.example.assignment.R
 import com.example.assignment.components.ProviderOrderCard
 import com.example.assignment.components.ReceiptRow
 import com.example.assignment.components.ReservationCard
-import com.example.assignment.data.reservationsList
 import com.example.assignment.model.Reservation
 
-@Composable
+/*@Composable
 fun OrderScreen(innerPadding: PaddingValues, navController: NavController) {
     Column(
         modifier = Modifier
@@ -210,4 +209,4 @@ fun OrderDetailScreen(innerPadding: PaddingValues,navController: NavController, 
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
+}*/

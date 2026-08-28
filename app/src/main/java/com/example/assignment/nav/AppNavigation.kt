@@ -1,14 +1,20 @@
 package com.example.assignment.nav
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.screen.AppNavigationBar
 import com.example.assignment.screen.home.FoodProviderHome
 import com.example.assignment.screen.home.FoodSaverHome
+import com.example.assignment.screen.inventoryModule.AddItemScreen
+import com.example.assignment.screen.inventoryModule.InventoryScreen
 import com.example.assignment.screen.login.ForgotPasswordScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.login.ResetPasswordScreen
@@ -20,6 +26,8 @@ fun AppNavigation(
     navController: NavHostController,
     authRepository: AuthRepository
 ) {
+
+    var AppPadding = PaddingValues(0.dp)
     NavHost(
         navController = navController,
         startDestination = "LOGIN"
@@ -91,11 +99,24 @@ fun AppNavigation(
         }
 
         composable("FOOD_SAVE_HOME") {
-            FoodSaverHome()
+            Scaffold(bottomBar = {AppNavigationBar(navController = navController, isConsumer = true)}) { innerPadding ->
+                AppPadding = innerPadding
+                FoodSaverHome(innerPadding)
+            }
         }
 
         composable("FOOD_PROVIDER_HOME") {
             FoodProviderHome()
         }
+
+        composable("INVENTORY_SCREEN"){
+            InventoryScreen(innerPadding = AppPadding, onAdd = {
+                navController.navigate("ADD_INVENTORY") })
+        }
+
+        composable("ADD_INVENTORY"){
+            AddItemScreen(onBack = {navController.popBackStack()})
+        }
+
     }
 }

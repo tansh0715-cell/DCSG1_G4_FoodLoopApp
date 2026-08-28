@@ -1,6 +1,6 @@
 package com.example.assignment.model
 
-data class Reservation(
+data class  Reservation(
     val orderId: String,
     val imageResId: Int,
     val foodName: String,

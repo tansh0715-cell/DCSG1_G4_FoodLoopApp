@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.data.supabase.supabase
 import com.example.assignment.nav.AppNavigation
+import com.example.assignment.ui.theme.AssignmentTheme
 import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
@@ -26,11 +27,12 @@ class MainActivity : ComponentActivity() {
             navController = navHostController
 
             handleAuthDeepLink(intent, navHostController)
-
-            AppNavigation(
-                navController = navHostController,
-                authRepository = authRepository
-            )
+            AssignmentTheme() {
+                AppNavigation(
+                    navController = navHostController,
+                    authRepository = authRepository
+                )
+            }
         }
     }
 
