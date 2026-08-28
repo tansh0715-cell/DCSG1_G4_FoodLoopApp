@@ -6,10 +6,11 @@ import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.repository.RestaurantRepository
 
-class AddFoodViewModelFactory(
-    private val repository: FoodRepository,
-    private val restaurantRepository: RestaurantRepository,
-    private val providerId: String
+class OrderViewModelFactory(
+    private val orderRepository: OrderRepository,
+    private val currentUserId: String,
+    private val foodRepository: FoodRepository,
+    private val restaurantRepository: RestaurantRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -17,12 +18,13 @@ class AddFoodViewModelFactory(
         modelClass: Class<T>
     ): T {
 
-        if (modelClass.isAssignableFrom(AddFoodViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(OrderViewModel::class.java)) {
 
-            return AddFoodViewModel(
-                repository = repository,
-                restaurantRepository = restaurantRepository,
-                currentProviderId = providerId
+            return OrderViewModel(
+                repository = orderRepository,
+                currentUserId = currentUserId,
+                foodRepository = foodRepository,
+                restaurantRepository = restaurantRepository
             ) as T
         }
 

@@ -3,6 +3,7 @@ package com.example.assignment.data.supabase
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.storage.Storage
 
 val supabase = createSupabaseClient (
     supabaseUrl = "https://wjwqgmfebufideenvmdh.supabase.co",
@@ -13,4 +14,5 @@ val supabase = createSupabaseClient (
         host = "login-callback"
     }
     install(Postgrest)
+    install(Storage)
 }

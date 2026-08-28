@@ -1,9 +1,12 @@
 package com.example.assignment.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.assignment.data.repository.FoodRepository
+import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.model.FoodListing
+import com.example.assignment.model.Restaurant
 import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.state.AddFoodUiState
 import kotlinx.coroutines.channels.Channel
@@ -20,6 +23,7 @@ import java.util.UUID
 
 class AddFoodViewModel(
     private val repository: FoodRepository,
+    private val restaurantRepository: RestaurantRepository,
     private val currentProviderId: String
 ): ViewModel() {
     var editingFoodId: String? = null
@@ -55,14 +59,35 @@ class AddFoodViewModel(
             )
         }
     }
-    fun onQtyChange(newValue: String){
-        //keep quantity numeric
+    fun onQtyChange(newValue: String) {
+
         val numericValue = newValue.filter { it.isDigit() }
-        _uiState.update {
-            it.copy(
-                quantity = newValue,
-                qtyError = null
-            )
+
+        if (numericValue.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    quantity = "",
+                    qtyError = null
+                )
+            }
+            return
+        }
+
+        val value = numericValue.toIntOrNull()
+
+        if (value != null && value <= 100) {
+            _uiState.update {
+                it.copy(
+                    quantity = value.toString(),
+                    qtyError = null
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    qtyError = "Quantity must be between 1 and 100"
+                )
+            }
         }
     }
     fun onDescriptionChange(newValue: String){
@@ -72,27 +97,66 @@ class AddFoodViewModel(
             )
         }
     }
-    fun onPriceChange(newValue: String){
-        _uiState.update {
-            it.copy(
-                originalPrice = newValue,
-                priceError = null
-            )
+    fun onPriceChange(newValue: String) {
+
+        // Only allow numbers with up to 2 decimal places
+        val cleaned = newValue
+            .replace(",", ".")
+            .filter { it.isDigit() || it == '.' }
+
+        // Prevent more than one decimal point
+        if (cleaned.count { it == '.' } > 1) {
+            return
+        }
+
+        // Maximum 2 decimal places
+        val decimalPart = cleaned.substringAfter('.', "")
+        if (decimalPart.length > 2) {
+            return
+        }
+
+        val value = cleaned.toDoubleOrNull()
+
+        if (value == null || value <= 100.0) {
+
+            _uiState.update {
+                it.copy(
+                    originalPrice = cleaned,
+                    priceError = null
+                )
+            }
+
+        } else {
+
+            _uiState.update {
+                it.copy(
+                    priceError = "Price cannot exceed RM100.00"
+                )
+            }
         }
     }
-    fun onDiscountChange(newValue: String){
-        val numericValue = newValue
-            .filter{it.isDigit()}
-            .toIntOrNull()?:0
+    fun onDiscountChange(newValue: String) {
 
-        val finalDiscount = numericValue.coerceIn(0,100)
-        val discountText =
-            if(newValue.isEmpty())
-                ""
-            else
-                finalDiscount.toString()
-        _uiState.update {
-            it.copy(selectedDiscount = discountText)
+        val numericValue = newValue
+            .filter { it.isDigit() }
+
+        if (numericValue.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    selectedDiscount = "",
+                )
+            }
+            return
+        }
+
+        val value = numericValue.toIntOrNull() ?: return
+
+        if (value <= 100) {
+            _uiState.update {
+                it.copy(
+                    selectedDiscount = value.toString()
+                )
+            }
         }
     }
 
@@ -104,6 +168,21 @@ class AddFoodViewModel(
             )
         }
     }
+
+    fun validatePickupTimeInput(): Boolean {
+        val pickupTime = _uiState.value.pickupTime
+
+        val error = validatePickupTime(pickupTime)
+
+        _uiState.update {
+            it.copy(
+                pickupTimeError = error
+            )
+        }
+
+        return error == null
+    }
+
     //the same food ID is preserved so the later upsert updates instead of inserting another card
     fun loadFoodForEdit(foodId: String){
         editingFoodId = foodId
@@ -114,6 +193,14 @@ class AddFoodViewModel(
                     providerId = currentProviderId
                 )
                 if(food!=null){
+                    if (food.quantity > 0) {
+                        _uiEvent.trySend(
+                            AddFoodEvent.ShowToast(
+                                "Food can only be edited after it is sold out"
+                            )
+                        )
+                        return@launch
+                    }
                     _uiState.update {
                         it.copy(
                             foodName = food.name,
@@ -122,7 +209,9 @@ class AddFoodViewModel(
                             quantity = food.quantity.toString(),
                             pickupTime = food.pickupTime,
                             originalPrice =food.originalPrice.toString(),
-                            selectedDiscount = food.discountPercentage.toString()
+                            selectedDiscount = food.discountPercentage.toString(),
+                            //Existing Supabase Image
+                            imageUrl = food.imageUrl
                         )
                     }
                 } else{
@@ -163,8 +252,11 @@ class AddFoodViewModel(
         if(currentState.quantity.isBlank()){
             newQtyError = "Quantity is required"
             isValid = false
-        }else if(qtyInt == null || qtyInt < 0){
-            newQtyError = "Quantity cannot be negative"
+        } else if (qtyInt == null || qtyInt < 1) {
+            newQtyError = "Quantity must be at least 1"
+            isValid = false
+        } else if (qtyInt > 100) {
+            newQtyError = "Quantity cannot exceed 100"
             isValid = false
         }
 
@@ -175,13 +267,21 @@ class AddFoodViewModel(
         }else if(originalPrice == null || originalPrice <= 0){
             newPriceError = "Please enter a valid price greater than 0"
             isValid = false
+        } else if (originalPrice > 100.0) {
+            newPriceError = "Price cannot exceed RM 100"
+            isValid = false
         }
 
-        if(currentState.pickupTime.isBlank()){
+        val pickupValidationMessage = validatePickupTime(currentState.pickupTime)
+
+        if (currentState.pickupTime.isBlank()) {
+
             newPickupTimeError = "Please select a pickup time"
             isValid = false
-        } else if(!isValidPickupTime(currentState.pickupTime)){
-            newPickupTimeError = "Pickup time must be valid and in the future"
+
+        } else if (pickupValidationMessage != null) {
+
+            newPickupTimeError = pickupValidationMessage
             isValid = false
         }
 
@@ -204,32 +304,73 @@ class AddFoodViewModel(
         }
     }
 
-    private fun isValidPickupTime(
+    private fun validatePickupTime(
         pickupTime: String
-    ): Boolean{
+    ): String? {
+
         return try {
+
             val parts = pickupTime.split(" - ")
 
-            if(parts.size != 2){
-                return false
+            if (parts.size != 2) {
+                return "Please select both start and end time"
             }
 
-            val formatter = DateTimeFormatter
-                .ofPattern("hh:mm a", Locale.ENGLISH)
-            val start = LocalTime.parse(parts[0], formatter)
-            val end = LocalTime.parse(parts[1], formatter)
+            val formatter =
+                DateTimeFormatter.ofPattern(
+                    "hh:mm a",
+                    Locale.ENGLISH
+                )
+
+            val start = LocalTime.parse(
+                parts[0].trim(),
+                formatter
+            )
+
+            val end = LocalTime.parse(
+                parts[1].trim(),
+                formatter
+            )
+
             val now = LocalTime.now()
 
-            //end must be after start
-            if(!end.isAfter(start)){
-                return false
+            // Start must be in the future
+            if (!start.isAfter(now)) {
+                return "Start time must be in the future"
             }
 
-            if (!start.isAfter(now)) return false
+            var  durationMinutes =
+                java.time.Duration.between(start, end).toMinutes()
 
-            true
-        } catch (e: Exception){
-            false
+            // If end time is earlier than start time,
+            // assume the pickup period continues into the next day.
+            if (durationMinutes <= 0) {
+                durationMinutes += 24 * 60
+            }
+
+            // Maximum pickup period should not exceed 24 hours.
+            if (durationMinutes > 24 * 60) {
+                return "Pickup time range cannot exceed 24 hours"
+            }
+            // Minimum 30 minutes
+            if (durationMinutes < 30) {
+                return "Pickup time must be at least 30 minutes"
+            }
+
+            null
+
+        } catch (e: Exception) {
+
+            "Invalid pickup time"
+        }
+    }
+
+    fun onImageSelected(uri: Uri) {
+        _uiState.update {
+            it.copy(
+                imageUri = uri.toString(),
+                imageError = null
+            )
         }
     }
 
@@ -237,61 +378,130 @@ class AddFoodViewModel(
         _uiState.update { it.copy(showConfirmDialog = false) }
     }
 
-    fun confirmPublish(){
+    fun confirmPublish(
+        imageBytes: ByteArray? = null
+    ) {
         dismissDialog()
 
         val currentState = _uiState.value
+
         val qtyInt = currentState.quantity.toIntOrNull()
         val originalPrice = currentState.originalPrice.toDoubleOrNull()
         val discount = currentState.selectedDiscount.toIntOrNull() ?: 0
-        val finalPrice = originalPrice!! * (1-discount/100.0)
 
-        if(
-            qtyInt == null ||
-            originalPrice == null ||
-            currentState.selectedCategory.isBlank() ||
-            currentState.pickupTime.isBlank()
-        ){
+        val foodId = editingFoodId ?: UUID.randomUUID().toString()
+
+        // Validate quantity first
+        if (qtyInt == null || qtyInt !in 1..100) {
             _uiEvent.trySend(
                 AddFoodEvent.ShowToast(
-                    "Invalid food information"
+                    "Quantity must be between 1 and 100"
                 )
             )
             return
         }
 
+        // Validate price
+        if (originalPrice == null || originalPrice !in 0.01..100.0) {
+            _uiEvent.trySend(
+                AddFoodEvent.ShowToast(
+                    "Price must be between RM0.01 and RM100.00"
+                )
+            )
+            return
+        }
+
+        // Validate discount
+        if (discount !in 0..100) {
+            _uiEvent.trySend(
+                AddFoodEvent.ShowToast(
+                    "Discount must be between 0% and 100%"
+                )
+            )
+            return
+        }
+
+        // Validate pickup time
+        val pickupError = validatePickupTime(
+            currentState.pickupTime
+        )
+
+        if (pickupError != null) {
+            _uiEvent.trySend(
+                AddFoodEvent.ShowToast(pickupError)
+            )
+            return
+        }
+
+        // Everything that calls suspend functions goes inside here
         viewModelScope.launch {
             try {
 
-                //create food listing object
-                val foodToSave = FoodListing(
-                    id = editingFoodId ?: UUID.randomUUID().toString(),
-                    providerId = currentProviderId,
-                    name = currentState.foodName.trim(),
-                    description = currentState.description.trim().ifBlank { null },
-                    category = currentState.selectedCategory,
-                    quantity = qtyInt,
-                    pickupTime = currentState.pickupTime,
-                    price = finalPrice,
-                    originalPrice = originalPrice,
-                    discountPercentage = discount
+                // Upload image inside coroutine because uploadFoodImage() is suspend
+                val imageUrl =
+                    if (imageBytes != null) {
+                        repository.uploadFoodImage(
+                            providerId = currentProviderId,
+                            foodId = foodId,
+                            imageBytes = imageBytes
+                        )
+                    } else {
+                        currentState.imageUrl
+                    }
+
+                val restaurantId = repository.getRestaurantIdByProvider(
+                    currentProviderId
                 )
 
-                //save to supabase
-                repository.upsertFoodListing(foodToSave)
+                if (restaurantId == null) {
+                    _uiEvent.trySend(
+                        AddFoodEvent.ShowToast(
+                            "No restaurant found for this provider"
+                        )
+                    )
+                    return@launch
+                }
 
-                //show diff success message for create and edit
+                // Create FoodListing
+                val food = FoodListing(
+                    id = foodId,
+                    providerId = currentProviderId,
+                    restaurant = restaurantId,
+                    name = currentState.foodName.trim(),
+                    category = currentState.selectedCategory,
+                    description = currentState.description
+                        .trim()
+                        .ifBlank { null },
+                    quantity = qtyInt,
+                    pickupTime = currentState.pickupTime,
+                    originalPrice = originalPrice,
+                    discountPercentage = discount,
+                    imageUrl = imageUrl,
+                    price = FoodListing.calculateFinalPrice(
+                        originalPrice,
+                        discount
+                    )
+                )
+
+                // Save to Supabase
+                repository.upsertFoodListing(food)
+
                 val message = if (editingFoodId == null) {
                     "Food published successfully!"
                 } else {
                     "Food updated successfully!"
                 }
 
-                _uiEvent.trySend(AddFoodEvent.ShowToast(message))
-                _uiEvent.trySend(AddFoodEvent.NavigateBack)
+                _uiEvent.trySend(
+                    AddFoodEvent.ShowToast(message)
+                )
 
-            } catch (e: Exception){
-                //if supabase fails, show error
+                _uiEvent.trySend(
+                    AddFoodEvent.NavigateBack
+                )
+
+            } catch (e: Exception) {
+
                 _uiEvent.trySend(
                     AddFoodEvent.ShowToast(
                         e.message ?: "Failed to save food"

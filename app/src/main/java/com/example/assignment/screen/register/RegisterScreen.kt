@@ -1,5 +1,7 @@
 package com.example.assignment.screen.register
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -29,20 +31,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.location.LocationTracker
 import com.example.assignment.viewmodel.register.RegisterViewModel
 
 @Composable
@@ -53,6 +60,77 @@ fun RegisterScreen(
     onBackToChoose: () -> Unit,
     viewModel: RegisterViewModel = viewModel(factory = RegisterViewModel.Factory(authRepository))
 ) {
+    val context = LocalContext.current
+    val locationTracker = remember {
+        LocationTracker(
+            context.applicationContext
+        )
+    }
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+
+            val granted =
+                permissions[
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ] == true ||
+                        permissions[
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ] == true
+
+            if (granted) {
+
+                locationTracker.start { location ->
+
+                    viewModel.setProviderLocation(
+                        latitude = location.latitude,
+                        longitude = location.longitude
+                    )
+                }
+            }
+        }
+
+    DisposableEffect(accountType) {
+
+        if (accountType == "FOOD_PROVIDER") {
+
+            val hasPermission =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED ||
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+
+            if (hasPermission) {
+
+                locationTracker.start { location ->
+
+                    viewModel.setProviderLocation(
+                        latitude = location.latitude,
+                        longitude = location.longitude
+                    )
+                }
+
+            } else {
+
+                locationPermissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
+        }
+
+        onDispose {
+            locationTracker.stop()
+        }
+    }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->

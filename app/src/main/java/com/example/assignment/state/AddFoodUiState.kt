@@ -10,11 +10,18 @@ data class AddFoodUiState(
 
     val pickupTime: String  = "",
 
+    // Local image selected from phone
+    val imageUri: String? = null,
+
+    // Existing image stored in Supabase
+    val imageUrl: String? = null,
+
     val nameError: String? = null,
     val categoryError: String? = null,
     val qtyError: String? = null,
     val priceError: String? = null,
     val pickupTimeError: String? = null,
+    val imageError: String? = null,
 
     val showConfirmDialog: Boolean = false
 )

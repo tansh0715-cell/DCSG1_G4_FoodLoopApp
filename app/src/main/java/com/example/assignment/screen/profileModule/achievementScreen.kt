@@ -25,7 +25,9 @@ import com.example.assignment.model.Achievement
 
 
 @Composable
-fun AchievementScreen(innerPadding: PaddingValues){
+fun AchievementScreen(
+    innerPadding: PaddingValues
+){
     val achievementList = mutableListOf<Achievement>(
         Achievement("First Food Rescue","Buy 1 surplus meal","\uD83C\uDFC5","You rescued your first surplus meal and prevented it from becoming waste.",1,1),
         Achievement("Waste Warrior","Buy 5 surplus meal","\uD83C\uDF31","Five meals saved from the bin. Small actions, real impact.",5,5),

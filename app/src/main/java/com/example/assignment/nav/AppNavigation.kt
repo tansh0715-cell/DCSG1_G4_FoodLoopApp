@@ -1,25 +1,60 @@
 package com.example.assignment.nav
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.data.repository.FoodRepository
+import com.example.assignment.data.repository.OrderRepository
+import com.example.assignment.data.repository.RestaurantRepository
+import com.example.assignment.data.supabase.supabase
+import com.example.assignment.screen.AddFoodScreen
 import com.example.assignment.screen.AppNavigationBar
-import com.example.assignment.screen.home.FoodProviderHome
-import com.example.assignment.screen.home.FoodSaverHome
+import com.example.assignment.screen.FoodDetailScreen
+import com.example.assignment.screen.HomeScreen
+import com.example.assignment.screen.NotificationScreen
+import com.example.assignment.screen.OrderDetailScreen
+import com.example.assignment.screen.OrderScreen
+import com.example.assignment.screen.ProviderHomeScreen
+import com.example.assignment.screen.ProviderNotificationScreen
+import com.example.assignment.screen.ProviderOrderScreen
+import com.example.assignment.screen.RestaurantDetailScreen
 import com.example.assignment.screen.inventoryModule.AddItemScreen
 import com.example.assignment.screen.inventoryModule.InventoryScreen
 import com.example.assignment.screen.login.ForgotPasswordScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.login.ResetPasswordScreen
+import com.example.assignment.screen.profileModule.AchievementScreen
+import com.example.assignment.screen.profileModule.ProfileScreen
 import com.example.assignment.screen.register.RegisterScreen
 import com.example.assignment.screen.register.RegisterTypeScreen
+import com.example.assignment.viewmodel.AddFoodViewModel
+import com.example.assignment.viewmodel.AddFoodViewModelFactory
+import com.example.assignment.viewmodel.FoodDetailViewModel
+import com.example.assignment.viewmodel.FoodDetailViewModelFactory
+import com.example.assignment.viewmodel.HomeViewModel
+import com.example.assignment.viewmodel.HomeViewModelFactory
+import com.example.assignment.viewmodel.OrderViewModel
+import com.example.assignment.viewmodel.OrderViewModelFactory
+import com.example.assignment.viewmodel.RestaurantDetailViewModel
+import com.example.assignment.viewmodel.RestaurantDetailViewModelFactory
+import io.github.jan.supabase.auth.auth
 
 @Composable
 fun AppNavigation(
@@ -28,6 +63,17 @@ fun AppNavigation(
 ) {
 
     var AppPadding = PaddingValues(0.dp)
+    val foodRepository = remember {
+        FoodRepository(supabase)
+    }
+    val restaurantRepository = remember {
+        RestaurantRepository(supabase)
+    }
+    val orderRepository = remember {
+        OrderRepository(supabase)
+    }
+    val currentUserId = supabase.auth.currentUserOrNull()?.id.orEmpty()
+
     NavHost(
         navController = navController,
         startDestination = "LOGIN"
@@ -35,12 +81,12 @@ fun AppNavigation(
         composable("LOGIN") {
             LoginScreen(
                 onFoodSaverLogin = {
-                    navController.navigate("FOOD_SAVE_HOME") {
+                    navController.navigate("HOME") {
                         popUpTo("LOGIN") { inclusive = true }
                     }
                 },
                 onFoodProviderLogin = {
-                    navController.navigate("FOOD_PROVIDER_HOME") {
+                    navController.navigate("PROVIDER_HOME") {
                         popUpTo("LOGIN") { inclusive = true }
                     }
                 },
@@ -98,25 +144,500 @@ fun AppNavigation(
             )
         }
 
-        composable("FOOD_SAVE_HOME") {
-            Scaffold(bottomBar = {AppNavigationBar(navController = navController, isConsumer = true)}) { innerPadding ->
-                AppPadding = innerPadding
-                FoodSaverHome(innerPadding)
+        composable("HOME") {
+            val homeViewModel: HomeViewModel =
+                viewModel(
+                    factory = HomeViewModelFactory(
+                        foodRepository,
+                        restaurantRepository,
+                        orderRepository,
+                        authRepository
+                    )
+                )
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = true
+                    )
+                }
+            ) { innerPadding ->
+                HomeScreen(
+                    innerPadding = innerPadding,
+                    navController = navController,
+                    viewModel = homeViewModel
+                )
             }
         }
 
-        composable("FOOD_PROVIDER_HOME") {
-            FoodProviderHome()
+        composable(
+            route = "restaurant/{restaurantId}",
+            arguments = listOf(
+                navArgument("restaurantId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { entry ->
+
+            val restaurantId =
+                entry.arguments
+                    ?.getString("restaurantId")
+                    .orEmpty()
+
+            val restaurantViewModel:
+                    RestaurantDetailViewModel =
+                viewModel(
+                    factory =
+                        RestaurantDetailViewModelFactory(
+                            restaurantRepository,
+                            foodRepository
+                        )
+                )
+
+            LaunchedEffect(
+                restaurantId
+            ) {
+
+                restaurantViewModel.load(
+                    restaurantId
+                )
+            }
+
+            RestaurantDetailScreen(
+                innerPadding =
+                    PaddingValues(),
+                navController =
+                    navController,
+                viewModel =
+                    restaurantViewModel
+            )
+        }
+
+        composable(
+            route = "food_detail/{foodId}",
+            arguments = listOf(
+                navArgument("foodId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { entry ->
+
+            val foodId =
+                entry.arguments
+                    ?.getString("foodId")
+                    .orEmpty()
+
+            val foodViewModel:
+                    FoodDetailViewModel =
+                viewModel(
+                    factory =
+                        FoodDetailViewModelFactory(
+                            foodRepository,
+                            restaurantRepository
+                        )
+                )
+
+            val foodState by
+            foodViewModel.uiState
+                .collectAsStateWithLifecycle()
+
+            LaunchedEffect(
+                foodId
+            ) {
+
+                foodViewModel.load(
+                    foodId
+                )
+            }
+
+            if (
+                foodState.isLoading
+            ) {
+
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize(),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        "Loading food..."
+                    )
+                }
+
+            } else if (
+                foodState.food != null
+            ) {
+
+                val orderViewModel:
+                        OrderViewModel =
+                    viewModel(
+                        factory =
+                            OrderViewModelFactory(
+                                orderRepository,
+                                currentUserId,
+                                foodRepository,
+                                restaurantRepository
+                            )
+                    )
+
+                FoodDetailScreen(
+                    innerPadding =
+                        PaddingValues(),
+
+                    restaurant =
+                        foodState.restaurant,
+
+                    food =
+                        foodState.food!!,
+
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+
+                    onPurchase = {
+                            selectedFoodId,
+                            quantity ->
+
+                        if (
+                            quantity <=
+                            foodState.food!!.quantity
+                        ) {
+
+                            orderViewModel.createOrder(
+                                foodId =
+                                    selectedFoodId,
+
+                                quantity =
+                                    quantity,
+
+                                onSuccess = { createdOrder ->
+                                    navController.navigate(
+                                        "ORDER_DETAIL/${createdOrder.id}"
+                                    )
+                                }
+                            )
+                        }
+                    }
+                )
+
+            } else {
+
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize(),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        foodState.errorMessage
+                            ?: "Food not found."
+                    )
+                }
+            }
+        }
+
+        composable(
+            route = "ORDER_DETAIL/{orderId}",
+            arguments = listOf(
+                navArgument("orderId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { entry ->
+
+            val orderId =
+                entry.arguments
+                    ?.getString("orderId")
+                    .orEmpty()
+
+            val orderViewModel:
+                    OrderViewModel =
+                viewModel(
+                    factory =
+                        OrderViewModelFactory(
+                            orderRepository,
+                            currentUserId,
+                            foodRepository,
+                            restaurantRepository
+                        )
+                )
+
+            val selectedOrder by orderViewModel.selectedOrder
+                .collectAsStateWithLifecycle()
+
+            LaunchedEffect(
+                orderId
+            ) {
+
+                orderViewModel.loadOrderById(
+                    orderId
+                )
+            }
+
+            if (
+                selectedOrder != null
+            ) {
+
+                OrderDetailScreen(
+                    innerPadding =
+                        PaddingValues(),
+
+                    navController =
+                        navController,
+
+                    order =
+                        selectedOrder!!,
+
+                    orderViewModel =
+                        orderViewModel
+                )
+
+            } else {
+
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize(),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        "Loading reservation details..."
+                    )
+                }
+            }
+        }
+
+        composable("PROVIDER_HOME") {
+            val providerId = supabase.auth.currentUserOrNull()?.id.orEmpty()
+
+            val homeViewModel: HomeViewModel =
+                viewModel(
+                    factory =
+                        HomeViewModelFactory(
+                            foodRepository,
+                            restaurantRepository,
+                            orderRepository,
+                            authRepository
+                        )
+                )
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = false
+                    )
+                }
+            ) { innerPadding ->
+
+                ProviderHomeScreen(
+                    innerPadding = innerPadding,
+                    navController = navController,
+                    viewModel = homeViewModel,
+                    providerId = providerId
+                )
+            }
+        }
+
+        composable("ORDER") {
+
+            val orderViewModel: OrderViewModel =
+                viewModel(
+                    factory =
+                        OrderViewModelFactory(
+                            orderRepository,
+                            currentUserId,
+                            foodRepository,
+                            restaurantRepository
+                        )
+                )
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = true
+                    )
+                }
+            ) { innerPadding ->
+
+                OrderScreen(
+                    innerPadding = innerPadding,
+                    orderViewModel = orderViewModel
+                )
+            }
+        }
+
+        composable("PROVIDER_ORDER") {
+
+            val orderViewModel: OrderViewModel =
+                viewModel(
+                    factory =
+                        OrderViewModelFactory(
+                            orderRepository,
+                            currentUserId,
+                            foodRepository,
+                            restaurantRepository
+                        )
+                )
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = false
+                    )
+                }
+            ) { innerPadding ->
+
+                ProviderOrderScreen(
+                    innerPadding = innerPadding,
+                    navController = navController,
+                    orderViewModel = orderViewModel
+                )
+            }
+        }
+
+        composable("ADD_FOOD") {
+            val providerId = supabase.auth.currentUserOrNull()?.id.orEmpty()
+
+            val addFoodViewModel: AddFoodViewModel =
+                viewModel(
+                    factory =
+                        AddFoodViewModelFactory(
+                            repository = foodRepository,
+                            restaurantRepository = restaurantRepository,
+                            providerId = providerId
+                        )
+                )
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = false
+                    )
+                }
+            ) { innerPadding ->
+                AddFoodScreen(
+                    navController = navController,
+                    innerPadding = innerPadding,
+                    viewModel = addFoodViewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+        composable("ADD_FOOD/{foodId}") { backStackEntry ->
+
+            val providerId =
+                supabase.auth.currentUserOrNull()?.id.orEmpty()
+
+            val foodId =
+                backStackEntry.arguments?.getString("foodId")
+
+            val addFoodViewModel: AddFoodViewModel =
+                viewModel(
+                    factory =
+                        AddFoodViewModelFactory(
+                            repository = foodRepository,
+                            restaurantRepository = restaurantRepository,
+                            providerId = providerId
+                        )
+                )
+
+            LaunchedEffect(foodId) {
+
+                if (!foodId.isNullOrBlank()) {
+                    addFoodViewModel.loadFoodForEdit(foodId)
+                }
+            }
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = false
+                    )
+                }
+            ) { innerPadding ->
+
+                AddFoodScreen(
+                    navController = navController,
+                    innerPadding = innerPadding,
+                    viewModel = addFoodViewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        composable("NOTIFICATIONS") {
+
+            NotificationScreen(
+                innerPadding = PaddingValues()
+            )
+        }
+        composable("PROVIDER_NOTIFICATIONS") {
+
+            ProviderNotificationScreen(
+                innerPadding = PaddingValues()
+            )
         }
 
         composable("INVENTORY_SCREEN"){
-            InventoryScreen(innerPadding = AppPadding, onAdd = {
-                navController.navigate("ADD_INVENTORY") })
+            InventoryScreen(
+                innerPadding = AppPadding,
+                onAdd = {
+                    navController.navigate("ADD_INVENTORY")
+                }
+            )
         }
 
         composable("ADD_INVENTORY"){
             AddItemScreen(onBack = {navController.popBackStack()})
         }
 
+        composable("PROFILE_PROVIDER") {
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = false
+                    )
+                }
+            ) { innerPadding ->
+
+                ProfileScreen(
+                    innerPadding = innerPadding,
+                    navController = navController
+                )
+            }
+        }
+
+        composable("PROFILE_CONSUMER") {
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = true
+                    )
+                }
+            ) { innerPadding ->
+
+                ProfileScreen(
+                    innerPadding = innerPadding,
+                    navController = navController
+                )
+            }
+        }
     }
 }

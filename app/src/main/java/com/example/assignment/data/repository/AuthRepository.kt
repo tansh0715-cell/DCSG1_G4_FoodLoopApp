@@ -3,9 +3,11 @@ package com.example.assignment.data.repository
 import com.example.assignment.data.supabase.supabase
 import com.example.assignment.model.FoodProvider
 import com.example.assignment.model.FoodSaver
+import com.example.assignment.model.Restaurant
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
+import java.util.UUID
 
 class AuthRepository {
     suspend fun registerFoodSaver(
@@ -45,7 +47,9 @@ class AuthRepository {
         phone: String,
         address: String,
         licensePhoneUrl: String,
-        password: String
+        password: String,
+        latitude: Double,
+        longitude: Double
     ){
 
         val cleanEmail = email.trim().lowercase()
@@ -71,8 +75,32 @@ class AuthRepository {
             licensePhotoUri = licensePhoneUrl
         )
 
-        supabase.from("food_providers").insert(foodProvider)
+        val restaurant = Restaurant(
+            id = UUID.randomUUID().toString(),
+            provider_id = user.id,
+            name = restaurantName.trim(),
+            address = address.trim(),
+            latitude = latitude,
+            longitude = longitude
+        )
 
+        // Create Restaurant Profile
+        // Restaurant name comes directly from provider registration
+        supabase.from("food_providers").insert(foodProvider)
+        try{
+            supabase.from("restaurants").insert(restaurant)
+        } catch (e: Exception){
+            try{
+                supabase.from("food_providers").delete {
+                    filter {
+                        eq("user_id",foodProvider.user_id)
+                    }
+                }
+            }catch (rollbackEx: Exception){
+                e.message ?: "Rollback failed: \${rollbackEx.message}"
+            }
+            throw Exception("Restaurant registration failed: ${e.localizedMessage}")
+        }
     }
 
     suspend fun login(
@@ -112,13 +140,33 @@ class AuthRepository {
             .decodeSingleOrNull<FoodProvider>()
 
         if (foodProvider != null) {
+            val restaurant = supabase.from("restaurants").select {
+                filter { eq("provider_id", user.id) }
+            }.decodeSingleOrNull<Restaurant>()
+
+            if(restaurant == null){
+                throw Exception("Restaurant profile is missing. Registration was incomplete.")
+            }
+
             return "FOOD_PROVIDER"
         }
 
         throw Exception("Account profile not found")
     }
 
+    suspend fun getFoodProvider(
+        userId: String
+    ): FoodProvider? {
 
+        return supabase
+            .from("food_providers")
+            .select {
+                filter {
+                    eq("user_id", userId)
+                }
+            }
+            .decodeSingleOrNull<FoodProvider>()
+    }
 
     suspend fun resetPassword(
         email: String

@@ -1,3 +1,21 @@
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile =
+    rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use {
+        localProperties.load(it)
+    }
+}
+
+val googleMapsApiKey =
+    localProperties.getProperty(
+        "GOOGLE_MAPS_API_KEY",
+        ""
+    )
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -14,8 +32,18 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "GOOGLE_MAPS_API_KEY",
+            "\"$googleMapsApiKey\""
+        )
+    }
+
+    buildFeatures{
+        compose = true
+        buildConfig = true
     }
 
     buildTypes {
@@ -57,6 +85,7 @@ dependencies {
     implementation(platform("io.github.jan-tennert.supabase:bom:3.7.0"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
 
     implementation("io.ktor:ktor-client-android:3.5.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")

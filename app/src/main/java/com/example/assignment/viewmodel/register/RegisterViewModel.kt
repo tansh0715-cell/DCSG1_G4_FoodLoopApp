@@ -27,6 +27,19 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
     var message by mutableStateOf("")
     var isLoading by mutableStateOf(false)
 
+    var providerLatitude by mutableStateOf<Double?>(null)
+        private set
+    var providerLongitude by mutableStateOf<Double?>(null)
+        private set
+
+    fun setProviderLocation(
+        latitude: Double,
+        longitude: Double
+    ) {
+        providerLatitude = latitude
+        providerLongitude = longitude
+    }
+
     fun register(accountType: String, onRegisterSuccess: () -> Unit) {
         if (password != confirmPassword) {
             message = "Passwords do not match"
@@ -67,6 +80,11 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
                     message = "Please upload the license photo"
                     return
                 }
+
+                if (providerLatitude == null || providerLongitude == null) {
+                    message = "Please allow location access before registering"
+                    return
+                }
             }
         }
 
@@ -90,7 +108,9 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
                             phone = phone.trim(),
                             address = address.trim(),
                             licensePhoneUrl = licensePhotoUri.toString(),
-                            password = password
+                            password = password,
+                            latitude = providerLatitude!!,
+                            longitude = providerLongitude!!
                         )
                     }
                 }

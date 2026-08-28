@@ -1,20 +1,11 @@
 package com.example.assignment.model
 
-import android.health.connect.datatypes.units.Percentage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-enum class UserRole{
-    PROVIDER, SAVER
-}
 enum class FoodStatus{
     AVAILABLE, ALMOST, SOLD_OUT
-}
-enum class FoodCategory{
-    Meals,
-    Bakery,
-    Snacks
 }
 
 @Serializable
@@ -24,6 +15,9 @@ data class FoodListing(
     @SerialName("provider_id")
     val providerId: String,
 
+    @SerialName("restaurant_id")
+    val restaurant: String?,
+
     //Food information
     val name: String,
     val category: String,
@@ -32,11 +26,19 @@ data class FoodListing(
 
     @SerialName("pickup_time")
     val pickupTime: String,
-    val price: Double = 0.0, //final selling price after discount
+    val price: Double, //final selling price after discount
+
+    @SerialName("original_price")
     val originalPrice: Double,
+
+    @SerialName("discount_percentage")
     val discountPercentage: Int,
 
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("image_url")
+    val imageUrl: String? = null,
+
+    @SerialName("created_at")
+    val createdAt: String? = null
 ){
     //status always derived from the current quantity
     val status: FoodStatus get() = getFoodStatus(quantity)
@@ -51,6 +53,14 @@ data class FoodListing(
                 quantity <= almostThreshold -> FoodStatus.ALMOST
                 else -> FoodStatus.AVAILABLE
             }
+        }
+
+        fun calculateFinalPrice(
+            originalPrice: Double,
+            discountPercentage: Int
+        ): Double {
+            return originalPrice *
+                    (1 - discountPercentage.coerceIn(0, 100) / 100.0)
         }
     }
 }

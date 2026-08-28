@@ -18,35 +18,75 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.assignment.R
 import com.example.assignment.ui.theme.navigationItemColors
 
 @Composable
-fun AppNavigationBar(navController: NavController, isConsumer: Boolean ){
-    var selectedItem by remember { mutableStateOf(if(isConsumer) "home" else "order") }
+fun AppNavigationBar(
+    navController: NavController,
+    isConsumer: Boolean
+){
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    var selectedItem = when {
+        isConsumer && currentRoute == "HOME" -> "home"
+        isConsumer && currentRoute == "ORDER" -> "order"
+        isConsumer && currentRoute == "INVENTORY_SCREEN" -> "fridge"
+        isConsumer && currentRoute == "PROFILE_CONSUMER" -> "profile"
+
+        !isConsumer && currentRoute == "PROVIDER_HOME" -> "home"
+        !isConsumer && currentRoute == "PROVIDER_ORDER" -> "order"
+        !isConsumer && currentRoute == "ADD_FOOD" -> "add"
+        !isConsumer && currentRoute == "PROFILE_PROVIDER" -> "profile"
+
+        else -> ""
+    }
 
     NavigationBar(
         containerColor = Color.White,
-        modifier = Modifier.shadow(16.dp, spotColor = MaterialTheme.colorScheme.onSecondary, ambientColor = MaterialTheme.colorScheme.onSecondary)
+        modifier = Modifier.shadow(
+            16.dp,
+            spotColor = MaterialTheme.colorScheme.onSecondary,
+            ambientColor = MaterialTheme.colorScheme.onSecondary
+        )
     ) {
         NavigationBarItem(
             selected = selectedItem == "home",
             onClick = {
                 selectedItem = "home"
-                navController.navigate("FOOD_SAVE_HOME"){
+                navController.navigate(
+                    if (isConsumer) {
+                        "HOME"
+                    } else {
+                        "PROVIDER_HOME"
+                    }
+                ) {
                     launchSingleTop = true
                     restoreState = true
                 }
             },
             icon = {
                 Icon(
-                    painter = painterResource(R.drawable.home_4_svgrepo_com),
+                    painter = painterResource(
+                        R.drawable.home_4_svgrepo_com
+                    ),
                     contentDescription = "Home",
-                    tint =  if(selectedItem == "home") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondary,
+                    tint =
+                        if (selectedItem == "home")
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.size(26.dp)
                 )
             },
-            label = { Text("Home",style = MaterialTheme.typography.labelMedium)},
+            label = {
+                Text(
+                    "Home",
+                    style = MaterialTheme.typography.labelMedium
+                )
+            },
             colors = navigationItemColors()
         )
 
@@ -55,7 +95,12 @@ fun AppNavigationBar(navController: NavController, isConsumer: Boolean ){
             selected = selectedItem == "order",
             onClick = {
                 selectedItem = "order"
-                navController.navigate("order"){
+                navController.navigate(
+                    if (isConsumer)
+                        "ORDER"
+                    else
+                        "PROVIDER_ORDER"
+                ){
                     launchSingleTop = true
                     restoreState = true
                 }
@@ -63,7 +108,7 @@ fun AppNavigationBar(navController: NavController, isConsumer: Boolean ){
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.order_svgrepo_com),
-                    contentDescription = "order",
+                    contentDescription = "Order",
                     tint =  if(selectedItem == "order") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.size(26.dp)
                 )
@@ -78,7 +123,7 @@ fun AppNavigationBar(navController: NavController, isConsumer: Boolean ){
                 selected = selectedItem == "add",
                 onClick = {
                     selectedItem = "add"
-                    navController.navigate("add"){
+                    navController.navigate("ADD_FOOD"){
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -122,7 +167,13 @@ fun AppNavigationBar(navController: NavController, isConsumer: Boolean ){
             selected = selectedItem == "profile",
             onClick = {
                 selectedItem = "profile"
-                navController.navigate("profile"){
+                navController.navigate(
+                    if (isConsumer) {
+                        "PROFILE_CONSUMER"
+                    } else {
+                        "PROFILE_PROVIDER"
+                    }
+                ) {
                     launchSingleTop = true
                     restoreState = true
                 }

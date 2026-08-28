@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.Scaffold
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.assignment.data.repository.AuthRepository
@@ -27,10 +28,10 @@ class MainActivity : ComponentActivity() {
             navController = navHostController
 
             handleAuthDeepLink(intent, navHostController)
-            AssignmentTheme() {
+            AssignmentTheme {
                 AppNavigation(
                     navController = navHostController,
-                    authRepository = authRepository
+                    authRepository = authRepository,
                 )
             }
         }

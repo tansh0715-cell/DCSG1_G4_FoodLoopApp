@@ -1,9 +1,7 @@
 package com.example.assignment.screen
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,9 +24,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,29 +38,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.assignment.R
+import coil3.compose.AsyncImage
 import com.example.assignment.components.InfoItem
 import com.example.assignment.model.FoodListing
 import com.example.assignment.model.FoodStatus
-import com.example.assignment.ui.theme.BorderYellow
+import com.example.assignment.model.Restaurant
 import com.example.assignment.ui.theme.SafeColor
 import com.example.assignment.ui.theme.SecondaryGreen
-import com.example.assignment.ui.theme.SecondaryYellow
+import com.example.assignment.util.googleMapThumbnailUrl
+import com.example.assignment.util.openGoogleMaps
 
 @Composable
 fun FoodDetailScreen(
     innerPadding: PaddingValues,
+    restaurant: Restaurant? = null,
     food: FoodListing,
-    onBackClick:()-> Unit
+    onBackClick:()-> Unit,
+    onPurchase: (String, Int) -> Unit
 ){
     val isSoldOut = food.status == FoodStatus.SOLD_OUT
     var reservationQuantity by remember { mutableStateOf(1) }
+    val context = LocalContext.current
 
     val timeOptions = listOf(food.pickupTime, "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM")
     Column(
@@ -200,95 +198,165 @@ fun FoodDetailScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Make a Reservation",
+                        text = restaurant?.name ?: "Restaurant",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    if (restaurant != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Quantity:",
-                            fontSize = 14.sp,
+                            text = restaurant.address,
                             color = MaterialTheme.colorScheme.onSecondary,
-                            modifier = Modifier.width(70.dp)
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        AsyncImage(
+                            model = googleMapThumbnailUrl(
+                                restaurant.address
+                            ),
+                            contentDescription = "Restaurant location",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp)
+                                .clip(
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    openGoogleMaps(
+                                        context,
+                                        restaurant
+                                    )
+                                }
                         )
 
-                        IconButton(
-                            enabled = !isSoldOut,
-                            onClick = {
-                                if (reservationQuantity > 1) reservationQuantity--
-                            },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(SafeColor, CircleShape)
-                        ) {
-                            Text(
-                                "-",
-                                color = SecondaryGreen,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
-                        }
-
+                    } else {
                         Text(
-                            text = reservationQuantity.toString(),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.width(40.dp)
-                        )
-
-                        IconButton(
-                            enabled = !isSoldOut && reservationQuantity < food.quantity,
-                            onClick = {
-                                if (reservationQuantity < food.quantity) reservationQuantity++
-                            },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                        ) {
-                            Text(
-                                "+",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Pickup: ${food.pickupTime}",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        enabled = !isSoldOut && reservationQuantity <= food.quantity,
-                        onClick = {
-                            // Reservation/payment is a separate module.
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = if (isSoldOut) "Sold Out" else "Reserve Now",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.background
+                            text = "Restaurant location is unavailable.",
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            fontSize = 13.sp
                         )
                     }
                 }
-            }
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ){
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Make a Reservation",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Quantity:",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSecondary,
+                                modifier = Modifier.width(70.dp)
+                            )
+
+                            IconButton(
+                                enabled = !isSoldOut && reservationQuantity < food.quantity,
+                                onClick = {
+                                    if (
+                                        reservationQuantity <
+                                        food.quantity
+                                    ) {
+                                        reservationQuantity++
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(SafeColor, CircleShape)
+                            ) {
+                                Text(
+                                    "-",
+                                    color = SecondaryGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
+
+                            Text(
+                                text = reservationQuantity.toString(),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.width(40.dp)
+                            )
+
+                            IconButton(
+                                enabled = !isSoldOut && reservationQuantity < food.quantity,
+                                onClick = {
+                                    if (reservationQuantity < food.quantity) reservationQuantity++
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                            ) {
+                                Text(
+                                    "+",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Pickup: ${food.pickupTime}",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSecondary
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            enabled = !isSoldOut &&
+                                    reservationQuantity >= 1 &&
+                                    reservationQuantity <= food.quantity,
+
+                            onClick = {
+                                if (
+                                    reservationQuantity >= 1 &&
+                                    reservationQuantity <= food.quantity
+                                ) {
+                                    onPurchase(
+                                        food.id,
+                                        reservationQuantity
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = if (isSoldOut) "Sold Out" else "Reserve Now",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.background
+                            )
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
