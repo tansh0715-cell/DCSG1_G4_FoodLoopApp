@@ -2,6 +2,9 @@ package com.example.assignment.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 enum class FoodStatus{
@@ -42,6 +45,42 @@ data class FoodListing(
 ){
     //status always derived from the current quantity
     val status: FoodStatus get() = getFoodStatus(quantity)
+
+    //Return true when the pickup time range has already ended
+    fun isPickupTimeEnded(): Boolean {
+        if(pickupTime.isBlank()){
+            return false
+        }
+        return try {
+            val parts = pickupTime.split(" - ")
+            if (parts.size != 2){
+                return false
+            }
+            val formatter = DateTimeFormatter.ofPattern(
+                "hh:mm a",
+                Locale.ENGLISH
+            )
+            val start = LocalTime.parse(
+                parts[0].trim(),
+                formatter
+            )
+            val end = LocalTime.parse(
+                parts[1].trim(),
+                formatter
+            )
+            val now = LocalTime.now()
+
+            return if (!end.isBefore(start)) {
+                // Normal same-day range
+                now.isAfter(end)
+            } else {
+                // Cross-midnight range
+                now.isAfter(end) && now.isBefore(start)
+            }
+        } catch (e: Exception){
+            false
+        }
+    }
 
     companion object{
         fun getFoodStatus(

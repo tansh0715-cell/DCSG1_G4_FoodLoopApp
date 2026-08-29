@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +62,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.components.FoodCard
+import com.example.assignment.components.ProviderFoodCard
 import com.example.assignment.components.StatCard
 import com.example.assignment.location.LocationTracker
 import com.example.assignment.ui.theme.BackgroundColor
@@ -159,7 +162,44 @@ fun HomeScreen(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        //Header (FoodLoop logo & notification)
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Column{
+                    Text(text = "FoodLoop", color = MaterialTheme.colorScheme.primary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(text = "Reduce waste, save food \uD83C\uDF3F", fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary)
+                }
 
+                Box{
+                    IconButton(
+                        onClick = {navController.navigate("notifications")},
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.White,CircleShape)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.notifications_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                            contentDescription = "Notification",
+                            tint = PrimaryGreen
+                        )
+                    }
+
+                    Box( //Red dot
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                            .align(Alignment.TopEnd)
+                            .offset(x = 2.dp, y = (-2).dp)
+                    )
+                }
+            }
+        }
         // Nearby Restaurants
         item {
 
@@ -208,41 +248,38 @@ fun HomeScreen(
                 }
 
                 else -> {
-
                     LazyRow(
-                        horizontalArrangement =
-                            Arrangement.spacedBy(12.dp),
-                        contentPadding =
-                            PaddingValues(end = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-
                         items(
-                            items =
-                                uiState.nearbyRestaurants,
-                            key = {
-                                it.id
-                            }
+                            items = uiState.nearbyRestaurants,
+                            key = { it.id }
                         ) { restaurant ->
 
                             Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
+                                ),
+                                elevation =
+                                    CardDefaults.cardElevation(2.dp),
+
                                 modifier = Modifier
-                                    .width(170.dp)
+                                    .size(
+                                        width = 140.dp,
+                                        height = 150.dp
+                                    )
                                     .clickable {
 
                                         navController.navigate(
                                             "restaurant/${restaurant.id}"
                                         )
-                                    },
-                                shape =
-                                    RoundedCornerShape(14.dp),
-                                colors =
-                                    CardDefaults.cardColors(
-                                        containerColor =
-                                            MaterialTheme.colorScheme.surface
-                                    ),
-                                elevation =
-                                    CardDefaults.cardElevation(
-                                        2.dp
+                                    }
+                                    .shadow(
+                                        elevation = 8.dp,
+                                        shape = RoundedCornerShape(12.dp),
+                                        spotColor = Color.Gray,
+                                        ambientColor = Color.LightGray
                                     )
                             ) {
 
@@ -257,34 +294,27 @@ fun HomeScreen(
                                     )
 
                                     Column(
-                                        modifier =
-                                            Modifier.padding(10.dp)
+                                        modifier = Modifier.padding(10.dp),
+                                        horizontalAlignment = Alignment.Start
                                     ) {
 
                                         Text(
-                                            text =
-                                                restaurant.name,
-                                            fontWeight =
-                                                FontWeight.Bold,
+                                            text = restaurant.name,
+                                            fontWeight = FontWeight.Bold,
                                             maxLines = 1,
-                                            overflow =
-                                                TextOverflow.Ellipsis
-                                        )
-
-                                        Spacer(
-                                            modifier =
-                                                Modifier.height(4.dp)
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onPrimary
                                         )
 
                                         Text(
-                                            text =
-                                                "${"%.1f".format(
-                                                    restaurant.distanceMeters /
-                                                            1000
-                                                )} km away",
+                                            text = String.format(
+                                                "%.1f km away",
+                                                restaurant.distanceMeters / 1000.0
+                                            ),
                                             fontSize = 12.sp,
-                                            color =
-                                                MaterialTheme.colorScheme.onSecondary
+                                            color = MaterialTheme.colorScheme.onSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
@@ -827,375 +857,5 @@ fun ProviderHomeScreen(
                 modifier = Modifier.height(20.dp)
             )
         }
-    }
-}
-
-// PROVIDER FOOD CARD
-@Composable
-fun ProviderFoodCard(
-    food: com.example.assignment.model.FoodListing,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-
-    var showDeleteDialog by
-    remember(food.id) {
-        mutableStateOf(false)
-    }
-
-    val isSoldOut =
-        food.quantity <= 0
-
-    val badgeText =
-        when {
-            isSoldOut -> "Sold Out"
-            food.quantity <= 5 -> "Almost"
-            else -> "Available"
-        }
-
-    val badgeTextColor =
-        when {
-            isSoldOut ->
-                MaterialTheme.colorScheme.onSecondary
-
-            food.quantity <= 5 ->
-                MaterialTheme.colorScheme.tertiary
-
-            else ->
-                MaterialTheme.colorScheme.primary
-        }
-
-    val badgeColor =
-        when {
-            isSoldOut ->
-                MaterialTheme.colorScheme.outline
-
-            food.quantity <= 5 ->
-                MaterialTheme.colorScheme.surfaceVariant
-
-            else ->
-                MaterialTheme.colorScheme.primaryContainer
-        }
-
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .alpha(if(isSoldOut) 0.65f else 1f),
-        shape =
-            RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme.colorScheme.surface
-            ),
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 1.dp
-            )
-    ) {
-
-        Column {
-
-            // Food Information
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-            ) {
-
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    horizontalArrangement =
-                        Arrangement.SpaceBetween,
-                    verticalAlignment =
-                        Alignment.Top
-                ) {
-
-                    Text(
-                        text = food.name,
-                        fontSize = 18.sp,
-                        fontWeight =
-                            FontWeight.Bold,
-                        color =
-                            MaterialTheme.colorScheme
-                                .onPrimary,
-                        modifier =
-                            Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow =
-                            TextOverflow.Ellipsis
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.width(8.dp)
-                    )
-
-                    Surface(
-                        shape =
-                            RoundedCornerShape(6.dp),
-                        color =
-                            badgeColor
-                    ) {
-
-                        Row(
-                            verticalAlignment =
-                                Alignment.CenterVertically,
-                            modifier =
-                                Modifier.padding(
-                                    horizontal = 8.dp,
-                                    vertical = 4.dp
-                                )
-                        ) {
-
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            badgeTextColor
-                                        )
-                            )
-
-                            Spacer(
-                                modifier =
-                                    Modifier.width(4.dp)
-                            )
-
-                            Text(
-                                text = badgeText,
-                                style =
-                                    MaterialTheme.typography
-                                        .labelSmall,
-                                color =
-                                    badgeTextColor
-                            )
-                        }
-                    }
-                }
-
-                Spacer(
-                    modifier =
-                        Modifier.height(8.dp)
-                )
-
-                Text(
-                    text =
-                        "Category: ${food.category}",
-                    fontSize = 12.sp,
-                    color =
-                        MaterialTheme.colorScheme
-                            .onSecondary
-                )
-
-                Text(
-                    text =
-                        "Available: ${food.quantity} left",
-                    fontSize = 12.sp,
-                    color =
-                        if (isSoldOut)
-                            MaterialTheme.colorScheme
-                                .onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme
-                                .onSecondary
-                )
-
-                Text(
-                    text =
-                        "Pickup: ${food.pickupTime}",
-                    fontSize = 12.sp,
-                    color =
-                        MaterialTheme.colorScheme
-                            .onSecondary
-                )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(6.dp)
-                )
-
-                Text(
-                    text =
-                        "RM${"%.2f".format(food.price)}",
-                    style =
-                        MaterialTheme.typography
-                            .titleLarge,
-                    color =
-                        if (isSoldOut)
-                            MaterialTheme.colorScheme
-                                .onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme
-                                .primary
-                )
-            }
-
-            HorizontalDivider(
-                color =
-                    MaterialTheme.colorScheme.outline
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(8.dp)
-            )
-
-            // Edit / Delete Buttons
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = 16.dp,
-                            vertical = 8.dp
-                        ),
-                horizontalArrangement =
-                    Arrangement.End,
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Surface(
-                    shape =
-                        RoundedCornerShape(8.dp),
-                    color =
-                        if (isSoldOut) {
-                            MaterialTheme.colorScheme.primaryContainer
-                                .copy(alpha = 0.8f)
-                        } else {
-                            MaterialTheme.colorScheme.onSecondary
-                        },
-                    modifier =
-                        Modifier.clickable(
-                            enabled = isSoldOut
-                        ) {
-                            onEdit()
-                        }
-                ) {
-
-                    Text(
-                        text = "Edit",
-                        fontSize = 13.sp,
-                        fontWeight =
-                            FontWeight.Bold,
-                        color =
-                            MaterialTheme.colorScheme
-                                .primary,
-                        modifier =
-                            Modifier.padding(
-                                horizontal = 16.dp,
-                                vertical = 6.dp
-                            )
-                    )
-                }
-
-                Spacer(
-                    modifier =
-                        Modifier.width(8.dp)
-                )
-
-                Surface(
-                    shape =
-                        RoundedCornerShape(8.dp),
-                    color =
-                        if (isSoldOut) {
-                            MaterialTheme.colorScheme.errorContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSecondary
-                        },
-                    modifier =
-                        Modifier.clickable(
-                            enabled = isSoldOut
-                        ) {
-                            showDeleteDialog = true
-                        }
-                ) {
-
-                    Text(
-                        text = "Delete",
-                        fontSize = 13.sp,
-                        fontWeight =
-                            FontWeight.Bold,
-                        color =
-                            MaterialTheme.colorScheme
-                                .error,
-                        modifier =
-                            Modifier.padding(
-                                horizontal = 16.dp,
-                                vertical = 6.dp
-                            )
-                    )
-                }
-            }
-        }
-    }
-
-    // Delete Confirmation Dialog
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-            },
-
-            title = {
-                Text("Delete Listing")
-            },
-
-            text = {
-                Text(
-                    "Are you sure you want to delete " +
-                            "'${food.name}'? " +
-                            "This action cannot be undone."
-                )
-            },
-
-            confirmButton = {
-                Button(
-                    onClick = {
-
-                        showDeleteDialog = false
-
-                        onDelete()
-                    },
-
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor =
-                                MaterialTheme.colorScheme
-                                    .primary
-                        )
-                ) {
-
-                    Text(
-                        text = "Delete",
-                        color =
-                            MaterialTheme.colorScheme
-                                .background
-                    )
-                }
-            },
-
-            dismissButton = {
-
-                Button(
-                    onClick = {
-                        showDeleteDialog = false
-                    }
-                ) {
-
-                    Text(
-                        text = "Cancel",
-                        color =
-                            MaterialTheme.colorScheme
-                                .background
-                    )
-                }
-            }
-        )
     }
 }

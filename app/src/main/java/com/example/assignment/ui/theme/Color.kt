@@ -22,7 +22,7 @@ val PrimaryGreen = Color(0xFF138A56)
 val SecondaryGreen = Color(0xFF01964B)
 
 val PrimaryBlue = Color(0xFF2563EB)
-val SecondaryBlue = Color(0xFFF1F5F9)
+val SecondaryBlue = Color(0xFFE1E9FC)
 val BorderBlue = Color(0xFF1E293B)
 
 val SecondaryYellow = Color(0xFFFFF8E1)

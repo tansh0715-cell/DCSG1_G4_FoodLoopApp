@@ -131,7 +131,7 @@ fun AddFoodScreen(
                 is AddFoodEvent.ShowToast -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
-                AddFoodEvent.NavigateBack -> onNavigateBack()
+                AddFoodEvent.NavigateToProviderHome-> onNavigateBack()
             }
         }
     }

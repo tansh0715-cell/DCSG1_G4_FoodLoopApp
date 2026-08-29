@@ -3,6 +3,8 @@ package com.example.assignment.util
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.example.assignment.BuildConfig
 import com.example.assignment.model.Restaurant
 import java.net.URLEncoder
@@ -26,6 +28,7 @@ fun googleMapThumbnailUrl(
             "&key=$GOOGLE_MAPS_API_KEY"
 }
 
+@RequiresApi(Build.VERSION_CODES.KITKAT)
 fun googleMapThumbnailUrl(
     address: String
 ): String {

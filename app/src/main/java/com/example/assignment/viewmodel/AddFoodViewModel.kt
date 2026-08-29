@@ -192,15 +192,19 @@ class AddFoodViewModel(
                     id = foodId,
                     providerId = currentProviderId
                 )
-                if(food!=null){
-                    if (food.quantity > 0) {
+                if(food!=null) {
+                    val canEdit = food.quantity <= 0 || food.isPickupTimeEnded()
+
+                    if (!canEdit) {
                         _uiEvent.trySend(
                             AddFoodEvent.ShowToast(
-                                "Food can only be edited after it is sold out"
+                                "This food can only be edited after it is sold out or the pickup time has ended."
                             )
                         )
+
                         return@launch
                     }
+
                     _uiState.update {
                         it.copy(
                             foodName = food.name,
@@ -208,16 +212,24 @@ class AddFoodViewModel(
                             selectedCategory = food.category,
                             quantity = food.quantity.toString(),
                             pickupTime = food.pickupTime,
-                            originalPrice =food.originalPrice.toString(),
+                            originalPrice = food.originalPrice.toString(),
                             selectedDiscount = food.discountPercentage.toString(),
                             //Existing Supabase Image
-                            imageUrl = food.imageUrl
+                            imageUrl = food.imageUrl,
+
+                            //clear local image, user can choose a new image if needed
+                            imageUri = null,
+
+                            nameError = null,
+                            categoryError = null,
+                            qtyError = null,
+                            priceError = null,
+                            pickupTimeError = null,
+                            imageError = null
                         )
                     }
-                } else{
-                    _uiEvent.trySend(AddFoodEvent.ShowToast("Food listing not found"))
-                    return@launch
                 }
+
             } catch (e: Exception){
                 _uiEvent.trySend(
                     AddFoodEvent.ShowToast(
@@ -497,7 +509,7 @@ class AddFoodViewModel(
                 )
 
                 _uiEvent.trySend(
-                    AddFoodEvent.NavigateBack
+                    AddFoodEvent.NavigateToProviderHome
                 )
 
             } catch (e: Exception) {

@@ -219,7 +219,7 @@ class HomeViewModel(
                 }
 
                 // Only sold-out food can be deleted
-                if (food.quantity > 0) {
+                if (!(food.quantity <= 0 || food.isPickupTimeEnded() )) {
                     _uiState.update {
                         it.copy(
                             errorMessage = "You can only delete sold-out food"
@@ -278,6 +278,10 @@ class HomeViewModel(
         latitude: Double,
         longitude: Double
     ) {
+        println(
+            "LOCATION DEBUG → lat=$latitude, lon=$longitude"
+        )
+
         _uiState.update {
             it.copy(
                 userLatitude = latitude,
@@ -291,11 +295,19 @@ class HomeViewModel(
 
         // First location update
         if (oldLat == null || oldLon == null) {
-            loadNearbyRestaurants(latitude, longitude)
+
+            println(
+                "NEARBY DEBUG → First location update, loading restaurants"
+            )
+
+            loadNearbyRestaurants(
+                latitude,
+                longitude
+            )
+
             return
         }
 
-        // Avoid calling Supabase for every tiny GPS update.
         val distance = android.location.Location("").apply {
             this.latitude = oldLat
             this.longitude = oldLon
@@ -306,9 +318,20 @@ class HomeViewModel(
             }
         )
 
-        // Refresh nearby restaurants after moving 200m.
+        println(
+            "NEARBY DEBUG → Moved ${distance}m"
+        )
+
         if (distance >= 200f) {
-            loadNearbyRestaurants(latitude, longitude)
+
+            println(
+                "NEARBY DEBUG → More than 200m, refreshing"
+            )
+
+            loadNearbyRestaurants(
+                latitude,
+                longitude
+            )
         }
     }
 
@@ -323,11 +346,26 @@ class HomeViewModel(
 
             try {
 
+                println(
+                    "NEARBY DEBUG → GPS: lat=$latitude, lon=$longitude"
+                )
+
                 val restaurants =
                     restaurantRepository.getNearbyRestaurants(
                         latitude = latitude,
                         longitude = longitude
                     )
+
+                println(
+                    "NEARBY DEBUG → RPC returned ${restaurants.size} restaurants"
+                )
+
+                restaurants.forEach {
+                    println(
+                        "NEARBY DEBUG → " +
+                                "${it.name}: ${it.distanceMeters}m"
+                    )
+                }
 
                 _uiState.update {
                     it.copy(
@@ -343,6 +381,12 @@ class HomeViewModel(
                 }
 
             } catch (e: Exception) {
+
+                println(
+                    "NEARBY DEBUG → ERROR: ${e.message}"
+                )
+
+                e.printStackTrace()
 
                 _uiState.update {
                     it.copy(

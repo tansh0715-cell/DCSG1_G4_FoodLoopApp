@@ -31,5 +31,5 @@ sealed class AddFoodEvent{
     data class ShowToast(
         val message: String
     ): AddFoodEvent()
-    object NavigateBack: AddFoodEvent() //return after successful publishing
+    object NavigateToProviderHome: AddFoodEvent() //return after successful publishing
 }
