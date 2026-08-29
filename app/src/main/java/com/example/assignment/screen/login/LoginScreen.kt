@@ -20,6 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,7 +37,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.assignment.R
+import com.example.assignment.data.UserPreferencesManager
+import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.data.supabase.supabase
+import com.example.assignment.model.FoodProvider
+import com.example.assignment.model.FoodSaver
 import com.example.assignment.viewmodel.LoginViewModel
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 
 @Composable
 fun LoginScreen(
@@ -41,17 +52,76 @@ fun LoginScreen(
     onFoodProviderLogin: () -> Unit,
     onRegister: () -> Unit,
     onForgotPassword: () -> Unit,
-    viewModel: LoginViewModel = viewModel()
+    authRepository: AuthRepository
 ) {
     val context = LocalContext.current
+    val userPreferencesManager = remember { UserPreferencesManager(context) }
 
-    LaunchedEffect(viewModel.toastMessage) {
-        viewModel.toastMessage?.let { message ->
+    val loginViewModel: LoginViewModel = viewModel(
+        factory = LoginViewModel.Factory(
+            authRepository = authRepository,
+            userPreferencesManager = userPreferencesManager
+        )
+    )
+
+    LaunchedEffect(loginViewModel.message) {
+        loginViewModel.message?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            viewModel.clearToast()
+            loginViewModel.clearMessage()
         }
     }
 
+    var isCheckingSession by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        val currentUser = supabase.auth.currentUserOrNull()
+        if (currentUser != null) {
+            try {
+                val userId = currentUser.id
+
+                // 查询是否是 Food Saver
+                val saver = supabase.from("food_savers")
+                    .select {
+                        filter { eq("user_id", userId) }
+                    }
+                    .decodeSingleOrNull<FoodSaver>()
+
+                if (saver != null) {
+                    onFoodSaverLogin()
+                    isCheckingSession = false
+                    return@LaunchedEffect
+                }
+
+                val provider = supabase.from("food_providers")
+                    .select {
+                        filter { eq("user_id", userId) }
+                    }
+                    .decodeSingleOrNull<FoodProvider>()
+
+                if (provider != null) {
+                    onFoodProviderLogin()
+                    isCheckingSession = false
+                    return@LaunchedEffect
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        isCheckingSession = false
+    }
+
+    if (isCheckingSession) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Checking session...", style = MaterialTheme.typography.bodyLarge)
+        }
+        return
+    }
+
+    // 正常显示登录表单
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -86,8 +156,8 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
-            value = viewModel.email,
-            onValueChange = { viewModel.email = it },
+            value = loginViewModel.email,
+            onValueChange = { loginViewModel.email = it },
             label = { Text("Email") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -100,8 +170,8 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedTextField(
-            value = viewModel.password,
-            onValueChange = { viewModel.password = it },
+            value = loginViewModel.password,
+            onValueChange = { loginViewModel.password = it },
             label = { Text("Password") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -127,7 +197,7 @@ fun LoginScreen(
 
         Button(
             onClick = {
-                viewModel.login { accountType ->
+                loginViewModel.login { accountType ->
                     if (accountType == "FOOD_SAVER") {
                         onFoodSaverLogin()
                     } else {
@@ -135,7 +205,7 @@ fun LoginScreen(
                     }
                 }
             },
-            enabled = !viewModel.isLoading,
+            enabled = !loginViewModel.isLoading,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2E7D32),

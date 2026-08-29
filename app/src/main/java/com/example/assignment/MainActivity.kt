@@ -7,8 +7,11 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.data.supabase.supabase
 import com.example.assignment.nav.AppNavigation
@@ -19,19 +22,35 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var authRepository: AuthRepository
     private var navController: NavHostController? = null
+    private lateinit var userPreferencesManager: UserPreferencesManager
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        authRepository = AuthRepository()
-        setContent {
-            val navHostController = rememberNavController()
-            navController = navHostController
 
-            handleAuthDeepLink(intent, navHostController)
+        // 初始化依赖
+        authRepository = AuthRepository()
+        userPreferencesManager = UserPreferencesManager(this)
+
+        setContent {
+            val navController = rememberNavController()
+
+            val userRoleFlow = userPreferencesManager.getUserRoleFlow()
+            val userRole by userRoleFlow.collectAsState(initial = null)
+
+            val startDestination = when (userRole) {
+                "FOOD_SAVER" -> "HOME"
+                "FOOD_PROVIDER" -> "PROVIDER_HOME"
+                else -> "LOGIN"
+            }
+
+            handleAuthDeepLink(intent, navController)
+
             AssignmentTheme {
                 AppNavigation(
-                    navController = navHostController,
+                    navController = navController,
                     authRepository = authRepository,
+                    startDestination = startDestination
                 )
             }
         }

@@ -185,4 +185,9 @@ class AuthRepository {
             password = newPassword
         }
     }
+
+    suspend fun logout() {
+        supabase.auth.signOut()
+    }
+
 }

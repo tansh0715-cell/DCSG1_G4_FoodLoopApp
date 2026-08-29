@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,6 +20,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
@@ -40,7 +42,6 @@ import com.example.assignment.screen.inventoryModule.InventoryScreen
 import com.example.assignment.screen.login.ForgotPasswordScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.login.ResetPasswordScreen
-import com.example.assignment.screen.profileModule.AchievementScreen
 import com.example.assignment.screen.profileModule.ProfileScreen
 import com.example.assignment.screen.register.RegisterScreen
 import com.example.assignment.screen.register.RegisterTypeScreen
@@ -59,10 +60,12 @@ import io.github.jan.supabase.auth.auth
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    authRepository: AuthRepository
+    authRepository: AuthRepository,
+    startDestination: String = "LOGIN"
+
 ) {
 
-    var AppPadding = PaddingValues(0.dp)
+    val AppPadding = PaddingValues(0.dp)
     val foodRepository = remember {
         FoodRepository(supabase)
     }
@@ -73,10 +76,12 @@ fun AppNavigation(
         OrderRepository(supabase)
     }
     val currentUserId = supabase.auth.currentUserOrNull()?.id.orEmpty()
+    val context = LocalContext.current
+    val userPreferencesManager = remember { UserPreferencesManager(context) }
 
     NavHost(
         navController = navController,
-        startDestination = "LOGIN"
+        startDestination = startDestination
     ) {
         composable("LOGIN") {
             LoginScreen(
@@ -91,7 +96,8 @@ fun AppNavigation(
                     }
                 },
                 onRegister = { navController.navigate("REGISTER") },
-                onForgotPassword = { navController.navigate("FORGOT_PASSWORD") }
+                onForgotPassword = { navController.navigate("FORGOT_PASSWORD") },
+                authRepository = authRepository
             )
         }
 
@@ -617,7 +623,9 @@ fun AppNavigation(
 
                 ProfileScreen(
                     innerPadding = innerPadding,
-                    navController = navController
+                    navController = navController,
+                    authRepository = authRepository,
+                    userPreferencesManager = userPreferencesManager
                 )
             }
         }
@@ -635,7 +643,9 @@ fun AppNavigation(
 
                 ProfileScreen(
                     innerPadding = innerPadding,
-                    navController = navController
+                    navController = navController,
+                    authRepository = authRepository,
+                    userPreferencesManager = userPreferencesManager
                 )
             }
         }

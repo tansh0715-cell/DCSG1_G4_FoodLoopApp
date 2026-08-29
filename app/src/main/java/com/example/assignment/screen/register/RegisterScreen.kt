@@ -2,6 +2,7 @@ package com.example.assignment.screen.register
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -32,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +77,7 @@ fun RegisterScreen(
                 permissions[
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ] == true ||
+
                         permissions[
                             Manifest.permission.ACCESS_COARSE_LOCATION
                         ] == true
@@ -135,6 +138,13 @@ fun RegisterScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         viewModel.licensePhotoUri = uri
+    }
+
+    LaunchedEffect(viewModel.message) {
+        viewModel.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
+        }
     }
 
     Column(
@@ -330,12 +340,5 @@ fun RegisterScreen(
             Text("Register")
         }
         Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = viewModel.message,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
     }
 }

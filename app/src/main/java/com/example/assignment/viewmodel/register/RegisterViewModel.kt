@@ -24,13 +24,18 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
     var address by mutableStateOf("")
     var licensePhotoUri by mutableStateOf<Uri?>(null)
 
-    var message by mutableStateOf("")
     var isLoading by mutableStateOf(false)
 
+    var message by mutableStateOf<String?>(null)
+        private set
     var providerLatitude by mutableStateOf<Double?>(null)
         private set
     var providerLongitude by mutableStateOf<Double?>(null)
         private set
+
+    fun clearMessage() {
+        message = null
+    }
 
     fun setProviderLocation(
         latitude: Double,

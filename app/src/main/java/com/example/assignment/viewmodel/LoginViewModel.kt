@@ -1,25 +1,32 @@
 package com.example.assignment.viewmodel
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.data.supabase.supabase
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(
+    private val authRepository: AuthRepository,
+    private val userPreferencesManager: UserPreferencesManager
+) : ViewModel() {
 
     var email by mutableStateOf("")
     var password by mutableStateOf("")
     var isLoading by mutableStateOf(false)
-    var toastMessage by mutableStateOf<String?>(null)
-    private val authRepository = AuthRepository()
+    var message by mutableStateOf<String?>(null)
 
     fun login(onSuccess: (String) -> Unit) {
         if (email.isBlank() || password.isBlank()) {
-            toastMessage = "Please fill in all fields"
+            message = "Please fill in all fields"
             return
         }
 
@@ -30,24 +37,36 @@ class LoginViewModel : ViewModel() {
                     email = email.trim().lowercase(),
                     password = password
                 )
+
+                val userId = supabase.auth.currentUserOrNull()?.id
+                    ?: throw Exception("User ID not found after login")
+                userPreferencesManager.saveUserData(accountType, userId)
+
                 when (accountType) {
                     "FOOD_SAVER" -> onSuccess("FOOD_SAVER")
                     "FOOD_PROVIDER" -> onSuccess("FOOD_PROVIDER")
-                    else -> {
-                        toastMessage = "Account type is not found"
-                    }
+                    else -> message  = "Account type is not found"
                 }
             } catch (e: Exception) {
-                // 保留了你原代码里的 Log.e
-                Log.e("Login", "Login failed", e)
-                toastMessage = "Login failed. Please check your email or password."
+                message  = "Login failed. \nPlease check your email or password."
             } finally {
                 isLoading = false
             }
         }
     }
 
-    fun clearToast() {
-        toastMessage = null
+    fun clearMessage() {
+        message = null
+    }
+
+    companion object {
+        fun Factory(
+            authRepository: AuthRepository,
+            userPreferencesManager: UserPreferencesManager
+        ): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                LoginViewModel(authRepository, userPreferencesManager)
+            }
+        }
     }
 }

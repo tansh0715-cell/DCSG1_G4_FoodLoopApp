@@ -81,14 +81,11 @@ fun AchievementScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.padding(horizontal = 20.dp)
                                 )
-
                             }
-
-                        }   }
+                        }
+                    }
                 }
-
             }
         }
     }
-
 }
