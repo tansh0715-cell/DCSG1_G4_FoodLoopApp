@@ -151,6 +151,7 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadAllFoods()
+        viewModel.loadConsumerNotificationState()
     }
 
     LazyColumn(
@@ -189,14 +190,16 @@ fun HomeScreen(
                         )
                     }
 
-                    Box( //Red dot
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red)
-                            .align(Alignment.TopEnd)
-                            .offset(x = 2.dp, y = (-2).dp)
-                    )
+                    if(uiState.hasNotifications){
+                        Box( //Red dot
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(Color.Red)
+                                .align(Alignment.TopEnd)
+                                .offset(x = 2.dp, y = (-2).dp)
+                        )
+                    }
                 }
             }
         }
@@ -267,12 +270,12 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(
                                         width = 140.dp,
-                                        height = 150.dp
+                                        height = 165.dp
                                     )
                                     .clickable {
 
                                         navController.navigate(
-                                            "restaurant/${restaurant.id}"
+                                            "restaurant/${restaurant.id}?distanceMeters=\${restaurant.distanceMeters}"
                                         )
                                     }
                                     .shadow(

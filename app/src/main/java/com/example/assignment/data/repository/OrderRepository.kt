@@ -59,6 +59,21 @@ class OrderRepository(
             )
             .decodeList()
     }
+    suspend fun getAllConsumerOrders(
+        consumerId: String
+    ): List<Order> {
+
+        return supabase.postgrest["orders"]
+            .select {
+                filter {
+                    eq(
+                        "consumer_id",
+                        consumerId
+                    )
+                }
+            }
+            .decodeList<Order>()
+    }
 
     suspend fun getProviderOrders(
         providerId: String

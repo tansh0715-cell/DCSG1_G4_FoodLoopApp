@@ -1,7 +1,6 @@
 package com.example.assignment.screen
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,16 +37,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.components.RestaurantInfoRow
-import com.example.assignment.model.FoodListing
 import com.example.assignment.viewmodel.RestaurantDetailViewModel
 
 @Composable
 fun RestaurantDetailScreen(
     innerPadding: PaddingValues,
     navController: NavController,
-    viewModel: RestaurantDetailViewModel
+    viewModel: RestaurantDetailViewModel,
+    distanceMeters: Double?
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
@@ -87,13 +87,13 @@ fun RestaurantDetailScreen(
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
-                Image(
-                    painter = painterResource(
-                        id = R.drawable.boulangeriebakery
-                    ),
-                    contentDescription = "Restaurant Image",
+                AsyncImage(
+                    model = restaurant.image_url,
+                    contentDescription = restaurant.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(230.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(230.dp)
                 )
                 //restaurant info
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -109,11 +109,12 @@ fun RestaurantDetailScreen(
                     )
                     RestaurantInfoRow(
                         iconResId = R.drawable.directions_run_24dp_cccccc_fill0_wght400_grad0_opsz24,
-                        text = "1.2 km away"
-                    )
-                    RestaurantInfoRow(
-                        iconResId = R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24,
-                        text = "Pickup today: 6:30 PM - 7:30 PM"
+                        text = distanceMeters?.let {
+                            String.format(
+                                "%.1f km away",
+                                it / 1000.0
+                            )
+                        }?: "Distance unavailable"
                     )
                 }
             }
@@ -200,11 +201,11 @@ fun RestaurantDetailScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-
-                            Text(
-                                text = "Food",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 12.sp
+                            AsyncImage(
+                                model = food.imageUrl,
+                                contentDescription = food.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
 
@@ -226,12 +227,10 @@ fun RestaurantDetailScreen(
                                 )
 
                                 if (food.discountPercentage > 0) {
-
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = discountColor
                                     ) {
-
                                         Text(
                                             text = "${food.discountPercentage}% OFF",
                                             color = Color.White,
@@ -244,80 +243,78 @@ fun RestaurantDetailScreen(
                                         )
                                     }
                                 }
+                            }
 
+                            if (!food.description.isNullOrBlank()) {
+                                Text(
+                                    text = food.description,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
 
-                                if (!food.description.isNullOrBlank()) {
+                            Spacer(
+                                modifier = Modifier.height(8.dp)
+                            )
 
-                                    Text(
-                                        text = food.description,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
 
-                                Spacer(
-                                    modifier = Modifier.height(8.dp)
+                                Text(
+                                    text = "RM ${
+                                        "%.2f".format(food.price)
+                                    }",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment =
-                                        Alignment.CenterVertically
-                                ) {
+                                Spacer(
+                                    modifier = Modifier.width(8.dp)
+                                )
 
-                                    Text(
-                                        text = "RM ${
-                                            "%.2f".format(food.price)
-                                        }",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                Text(
+                                    text = "RM ${
+                                        "%.2f".format(food.originalPrice)
+                                    }",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    textDecoration =
+                                        TextDecoration.LineThrough
+                                )
 
-                                    Spacer(
-                                        modifier = Modifier.width(8.dp)
-                                    )
+                                Spacer(
+                                    modifier = Modifier.weight(1f)
+                                )
 
-                                    Text(
-                                        text = "RM ${
-                                            "%.2f".format(food.originalPrice)
-                                        }",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSecondary,
-                                        textDecoration =
-                                            TextDecoration.LineThrough
-                                    )
+                                Text(
+                                    text = if (food.quantity <= 0) {
+                                        "Sold out"
+                                    } else {
+                                        "Only ${food.quantity} left"
+                                    },
+                                    color = if (food.quantity <= 0) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    },
+                                    style = MaterialTheme.typography.labelSmall
+                                )
 
-                                    Spacer(
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    Text(
-                                        text = if (food.quantity <= 0) {
-                                            "Sold out"
-                                        } else {
-                                            "Only ${food.quantity} left"
-                                        },
-                                        color = if (food.quantity <= 0) {
-                                            MaterialTheme.colorScheme.error
-                                        } else {
-                                            MaterialTheme.colorScheme.error
-                                        },
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-
-                                    Icon(
-                                        painter = painterResource(
-                                            id = R.drawable.arrow_forward_24dp_cccccc_fill0_wght400_grad0_opsz24
-                                        ),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSecondary
-                                            .copy(alpha = 0.5f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
+                                Icon(
+                                    painter = painterResource(
+                                        id = R.drawable.arrow_forward_24dp_cccccc_fill0_wght400_grad0_opsz24
+                                    ),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondary
+                                        .copy(alpha = 0.5f),
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
                     }

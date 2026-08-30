@@ -2,6 +2,7 @@ package com.example.assignment.screen
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,15 +41,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.example.assignment.R
 import com.example.assignment.components.InfoItem
 import com.example.assignment.model.FoodListing
 import com.example.assignment.model.FoodStatus
 import com.example.assignment.model.Restaurant
+import com.example.assignment.model.getDiscountBadgeColor
 import com.example.assignment.ui.theme.SafeColor
 import com.example.assignment.ui.theme.SecondaryGreen
 import com.example.assignment.util.googleMapThumbnailUrl
@@ -64,8 +71,8 @@ fun FoodDetailScreen(
     val isSoldOut = food.status == FoodStatus.SOLD_OUT
     var reservationQuantity by remember { mutableStateOf(1) }
     val context = LocalContext.current
+    var descriptionExpanded by remember { mutableStateOf(false) }
 
-    val timeOptions = listOf(food.pickupTime, "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -76,14 +83,14 @@ fun FoodDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
+                .height(220.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Food Image",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+            AsyncImage(
+                model = food.imageUrl,
+                contentDescription = food.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
         }
 
@@ -98,7 +105,7 @@ fun FoodDetailScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Provider ID: ${food.providerId}",
+                text = restaurant?.name ?: "Restaurant",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSecondary,
                 fontWeight = FontWeight.Medium
@@ -108,8 +115,35 @@ fun FoodDetailScreen(
                 Text(
                     text = food.description,
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSecondary
+                    textAlign = TextAlign.Justify,
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    maxLines = if(descriptionExpanded){
+                        Int.MAX_VALUE
+                    }else{
+                        3
+                    },
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                if (food.description.length > 180) {
+
+                    Text(
+                        text = if (descriptionExpanded) {
+                            "Less"
+                        } else {
+                            "More"
+                        },
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .clickable {
+                                descriptionExpanded =
+                                    !descriptionExpanded
+                            }
+                            .padding(top = 4.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(
@@ -133,7 +167,7 @@ fun FoodDetailScreen(
                     Spacer(modifier = Modifier.weight(1f))
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.error
+                        color = food.getDiscountBadgeColor()
                     ) {
                         Text(
                             text = "${food.discountPercentage}% OFF",
@@ -149,8 +183,7 @@ fun FoodDetailScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .height(IntrinsicSize.Min),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(modifier = Modifier.weight(1f)) {
@@ -167,8 +200,9 @@ fun FoodDetailScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Food Provider",
-                style = MaterialTheme.typography.titleLarge,
+                text = "Restaurant Location",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimary
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -180,16 +214,61 @@ fun FoodDetailScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 shape = RoundedCornerShape(12.dp)
             ) {
+                if (restaurant != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = restaurant.address,
+                        color = MaterialTheme.colorScheme.onSecondary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    AsyncImage(
+                        model = googleMapThumbnailUrl(
+                            restaurant.latitude,
+                            restaurant.longitude
+                        ),
+                        contentDescription = "Restaurant location",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .clip(
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                openGoogleMaps(
+                                    context,
+                                    restaurant
+                                )
+                            }
+                    )
+
+                } else {
+                    Text(
+                        text = "Restaurant location is unavailable.",
+                        color = MaterialTheme.colorScheme.onSecondary,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically){
+                Icon(
+                    painter = painterResource(id = R.drawable.location_on_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                    contentDescription = "Location Pin",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Location details are not stored in FoodListing yet.",
-                    color = MaterialTheme.colorScheme.onSecondary,
+                    text = restaurant?.address ?: "Restaurant",
                     fontSize = 13.sp,
-                    modifier = Modifier.padding(16.dp)
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
-
             Spacer(modifier = Modifier.height(24.dp))
-
+            //Reservation Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background),
@@ -198,47 +277,12 @@ fun FoodDetailScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = restaurant?.name ?: "Restaurant",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Make a Reservation",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
-
-                    if (restaurant != null) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = restaurant.address,
-                            color = MaterialTheme.colorScheme.onSecondary,
-                            fontSize = 13.sp
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        AsyncImage(
-                            model = googleMapThumbnailUrl(
-                                restaurant.address
-                            ),
-                            contentDescription = "Restaurant location",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(150.dp)
-                                .clip(
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .clickable {
-                                    openGoogleMaps(
-                                        context,
-                                        restaurant
-                                    )
-                                }
-                        )
-
-                    } else {
-                        Text(
-                            text = "Restaurant location is unavailable.",
-                            color = MaterialTheme.colorScheme.onSecondary,
-                            fontSize = 13.sp
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -249,14 +293,6 @@ fun FoodDetailScreen(
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ){
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Make a Reservation",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -269,23 +305,23 @@ fun FoodDetailScreen(
                                 modifier = Modifier.width(70.dp)
                             )
 
+                            //Minus Button
                             IconButton(
-                                enabled = !isSoldOut && reservationQuantity < food.quantity,
+                                enabled = !isSoldOut && reservationQuantity > 1,
                                 onClick = {
                                     if (
-                                        reservationQuantity <
-                                        food.quantity
+                                        reservationQuantity > 1
                                     ) {
-                                        reservationQuantity++
+                                        reservationQuantity--
                                     }
                                 },
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(SafeColor, CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
                             ) {
                                 Text(
                                     "-",
-                                    color = SecondaryGreen,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
                                 )
@@ -295,13 +331,16 @@ fun FoodDetailScreen(
                                 text = reservationQuantity.toString(),
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.width(40.dp)
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .padding(horizontal = 4.dp)
                             )
 
                             IconButton(
                                 enabled = !isSoldOut && reservationQuantity < food.quantity,
                                 onClick = {
-                                    if (reservationQuantity < food.quantity) reservationQuantity++
+                                    if (reservationQuantity < food.quantity)
+                                        reservationQuantity++
                                 },
                                 modifier = Modifier
                                     .size(36.dp)
@@ -317,11 +356,42 @@ fun FoodDetailScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
                             text = "Pickup: ${food.pickupTime}",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSecondary
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        //warning frame
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                                .border(
+                                    border = BorderStroke(1.dp,MaterialTheme.colorScheme.onTertiaryContainer),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24),
+                                    contentDescription = "Warning",
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Please confirm your reservation carefully. Once confirmed, the reservation cannot be cancelled.",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
@@ -355,9 +425,9 @@ fun FoodDetailScreen(
                             )
                         }
                     }
+
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
-}

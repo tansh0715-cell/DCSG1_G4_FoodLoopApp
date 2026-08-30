@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -49,61 +49,55 @@ fun FoodCard(
     food: FoodListing,
     isProvider: Boolean,
     onEditClick: () -> Unit,
-    onCardClick: () -> Unit = {}
+    onCardClick: () -> Unit
 ){
     val isSoldOut = food.status == FoodStatus.SOLD_OUT
-    val cardAlpha = if (isSoldOut) 0.55f else 1f
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clickable(enabled = !isSoldOut || isProvider) {
-                onCardClick()
-            },
-
+            .clickable(
+                enabled = !isSoldOut || isProvider,
+                onClick = {onCardClick()}
+            ),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = cardAlpha)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(1.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(1.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!food.imageUrl.isNullOrBlank()) {
-
-                        AsyncImage(
-                            model = food.imageUrl,
-                            contentDescription = food.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-
-                    } else {
-
+                if(!food.imageUrl.isNullOrBlank()){
+                    AsyncImage(
+                        model = food.imageUrl,
+                        contentDescription = food.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ){
                         Text(
                             text = "Food",
                             color = MaterialTheme.colorScheme.primary,
-                            fontSize = 12.sp
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.size(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -111,17 +105,24 @@ fun FoodCard(
                 ) {
                     Text(
                         text = food.name,
-                        fontSize = 16.sp,
-                        color = if (isSoldOut) MaterialTheme.colorScheme.onSecondary
-                        else MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.weight(1f) //push tag to right side
                     )
-
                     Spacer(modifier = Modifier.size(6.dp))
-                    StatusBadge(food.status)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                    ) {
+                        Text(
+                            text = "${food.discountPercentage}% OFF",
+                            color = MaterialTheme.colorScheme.surface,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
-
                 if (!food.description.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -133,52 +134,48 @@ fun FoodCard(
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Category: ${food.category}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
-                Text(
-                    text = "Pickup: ${food.pickupTime}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
-                Text(
-                    text = if (isSoldOut) "Sold out" else "Only ${food.quantity} left",
-                    fontSize = 12.sp,
-                    color = if (isSoldOut) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSecondary
-                )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    if(food.discountPercentage > 0){
+                        Text(
+                            text = "RM ${"%.2f".format(food.originalPrice)}",
+                            fontSize = 13.sp,
+                            color = Color(0xFF94A3B8),
+                            textDecoration = TextDecoration.LineThrough //ori price crossed out
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (food.discountPercentage > 0) {
-                Text(
-                    text = "RM ${"%.2f".format(food.originalPrice)}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSecondary,
-                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-            }
+                    Text(
+                        text = "RM ${"%.2f".format(food.price)}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "RM ${"%.2f".format(food.price)}",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (isProvider) {
-                Button(onClick = onEditClick) {
-                    Text("Edit")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ){
+                    Text("Pickup: ${food.pickupTime}",
+                        fontSize = 11.sp,
+                        color = Color.DarkGray,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text("Only ${food.quantity} left",
+                        fontSize = 11.sp,
+                        color = if(isSoldOut)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
@@ -198,8 +195,8 @@ fun ProviderFoodCard(
 
     // Status
     val isSoldOut = food.status == FoodStatus.SOLD_OUT
-    val isPickupEnded = food.isPickupTimeEnded()
-    val canManage = isSoldOut || isPickupEnded
+    val isExpired = food.isPickupTimeEnded()
+    val canManage = true
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -221,11 +218,11 @@ fun ProviderFoodCard(
                             .size(80.dp)
                             .clip(RoundedCornerShape(12.dp))
                     )
-                    if (isSoldOut) {
+                    if (isSoldOut || isExpired) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.55f))
+                                .matchParentSize()
+                                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.28f))
                         )
                     }
                 }
@@ -309,8 +306,8 @@ fun ProviderFoodCard(
                                 MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSecondary.copy(
-                                alpha = 0.65f
-                            ),
+                                    alpha = 0.65f
+                                ),
                         modifier = Modifier.padding(horizontal = 16.dp,
                             vertical = 6.dp)
                     )

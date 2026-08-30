@@ -1,5 +1,7 @@
 package com.example.assignment.model
 
+import androidx.compose.ui.graphics.Color
+import com.example.assignment.ui.theme.PrimaryGreen
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalTime
@@ -101,5 +103,18 @@ data class FoodListing(
             return originalPrice *
                     (1 - discountPercentage.coerceIn(0, 100) / 100.0)
         }
+    }
+}
+
+fun FoodListing.getDiscountBadgeColor(): Color {
+    return when {
+        discountPercentage >= 70 ->
+            Color(0xFFF44336)
+
+        discountPercentage >= 50 ->
+            Color(0xFFFF9800)
+
+        else ->
+            PrimaryGreen
     }
 }

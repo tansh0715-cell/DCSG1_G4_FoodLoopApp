@@ -18,20 +18,23 @@ class OrderViewModel(
     private val repository: OrderRepository,
     private val currentUserId: String,
     private val foodRepository: FoodRepository,
-    private val restaurantRepository: RestaurantRepository
+    private val restaurantRepository: RestaurantRepository,
 ) : ViewModel() {
 
-    private val _orders =
-        MutableStateFlow<List<Order>>(emptyList())
+    private val _orders = MutableStateFlow<List<Order>>(emptyList())
 
-    val orders: StateFlow<List<Order>> =
-        _orders.asStateFlow()
+    val orders: StateFlow<List<Order>> = _orders.asStateFlow()
 
-    private val _isLoading =
-        MutableStateFlow(false)
+    private val _allNotificationOrders = MutableStateFlow<List<Order>>(emptyList())
 
-    val isLoading: StateFlow<Boolean> =
-        _isLoading.asStateFlow()
+    val allNotificationOrders: StateFlow<List<Order>> = _allNotificationOrders.asStateFlow()
+
+    private val _providerNotificationOrders = MutableStateFlow<List<Order>>(emptyList())
+    val providerNotificationOrders: StateFlow<List<Order>> = _providerNotificationOrders.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     //Order detail data
     private val _selectedFood = MutableStateFlow<FoodListing?>(null)
@@ -45,20 +48,59 @@ class OrderViewModel(
     private val _isDetailLoading = MutableStateFlow(false)
     val isDetailLoading: StateFlow<Boolean> = _isDetailLoading.asStateFlow()
 
+    private val _providerNotificationFoods = MutableStateFlow<List<FoodListing>>(
+        emptyList()
+    )
+    val providerNotificationFoods: StateFlow<List<FoodListing>> =
+        _providerNotificationFoods.asStateFlow()
+
+    private val _foodByOrderId = MutableStateFlow<Map<String, FoodListing>>(emptyMap())
+    val foodByOrderId: StateFlow<Map<String, FoodListing>> = _foodByOrderId.asStateFlow()
+    private val _restaurantByOrderId = MutableStateFlow<Map<String, Restaurant>>(emptyMap())
+    val restaurantByOrderId: StateFlow<Map<String, Restaurant>> = _restaurantByOrderId.asStateFlow()
+
     fun loadConsumerOrders() {
         viewModelScope.launch {
             _isLoading.value = true
 
             try {
-                _orders.value =
-                    repository.getConsumerOrders(currentUserId)
-            }catch (e: Exception) {
+                val loadedOrders =
+                    repository.getConsumerOrders(
+                        currentUserId
+                    )
+                _orders.value = loadedOrders
+                loadConsumerRelatedData(
+                    loadedOrders
+                )
+            } catch (e: Exception) {
                 e.printStackTrace()
                 _orders.value = emptyList()
-            }finally {
+            } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    private suspend fun loadConsumerRelatedData(
+        orders: List<Order>
+    ) {
+        val foods = mutableMapOf<String, FoodListing>()
+
+        val restaurants = mutableMapOf<String, Restaurant>()
+
+        orders.forEach { order ->
+
+            foodRepository.getFoodListingById(order.foodId)?.let { food ->
+                foods[order.id] = food
+            }
+
+            restaurantRepository.getRestaurantById(order.restaurantId)?.let { restaurant ->
+                restaurants[order.id] = restaurant
+            }
+        }
+
+        _foodByOrderId.value = foods
+        _restaurantByOrderId.value = restaurants
     }
 
     fun loadOrderById(
@@ -101,12 +143,33 @@ class OrderViewModel(
                     restaurantId = order.restaurantId
                 )
             } catch (e: Exception){
-                 e.printStackTrace()
+                e.printStackTrace()
 
                 _selectedFood.value = null
                 _selectedRestaurant.value = null
             } finally {
                 _isDetailLoading.value = false
+            }
+        }
+    }
+    fun loadConsumerNotificationOrders() {
+        viewModelScope.launch {
+            try {
+                val notificationOrders =
+                    repository.getAllConsumerOrders(
+                        currentUserId
+                    )
+                _allNotificationOrders.value =
+                    notificationOrders
+
+                loadConsumerRelatedData(
+                    notificationOrders
+                )
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _allNotificationOrders.value =
+                    emptyList()
             }
         }
     }
@@ -127,7 +190,7 @@ class OrderViewModel(
 
                 onSuccess(
                     createdOrder
-                 )
+                )
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -155,6 +218,26 @@ class OrderViewModel(
             } finally {
 
                 _isLoading.value = false
+            }
+        }
+    }
+    fun loadProviderNotificationOrders() {
+        viewModelScope.launch {
+            try {
+                _providerNotificationOrders.value =
+                    repository.getProviderOrders(
+                        currentUserId
+                    )
+                _providerNotificationFoods.value =
+                    foodRepository
+                        .getFoodListingByProvider(
+                            currentUserId
+                        )
+            } catch (e: Exception) {
+                e.printStackTrace()
+
+                _providerNotificationOrders.value =
+                    emptyList()
             }
         }
     }

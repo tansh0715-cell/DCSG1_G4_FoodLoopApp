@@ -8,16 +8,23 @@ import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.NearbyRestaurantRow
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.repository.RestaurantRepository
+import com.example.assignment.data.supabase.supabase
 import com.example.assignment.model.FoodListing
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class HomeUiState(
     val isLoading: Boolean = false,
     val foods: List<FoodListing> = emptyList(),
+
+    val hasNotifications: Boolean = false,
+
     val selectedCategoryIndex: Int = 0,
     val categories: List<String> = listOf("All", "Meals", "Bakery", "Snacks"),
 
@@ -148,7 +155,11 @@ class HomeViewModel(
 
             try {
                 allFoods = if (providerId.isNullOrBlank()) {
-                    foodRepository.getAllFoodListings()
+                    foodRepository
+                        .getAllFoodListings()
+                        .filter { food ->
+                            food.quantity > 0 && !food.isPickupTimeEnded()
+                        }
                 } else {
                     foodRepository.getFoodListingByProvider(providerId)
                 }
@@ -217,17 +228,6 @@ class HomeViewModel(
                     }
                     return@launch
                 }
-
-                // Only sold-out food can be deleted
-                if (!(food.quantity <= 0 || food.isPickupTimeEnded() )) {
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = "You can only delete sold-out food"
-                        )
-                    }
-                    return@launch
-                }
-
                 foodRepository.deleteFoodListing(
                     foodId = foodId,
                     providerId = providerId
@@ -345,27 +345,13 @@ class HomeViewModel(
         viewModelScope.launch {
 
             try {
-
-                println(
-                    "NEARBY DEBUG → GPS: lat=$latitude, lon=$longitude"
-                )
-
                 val restaurants =
-                    restaurantRepository.getNearbyRestaurants(
-                        latitude = latitude,
-                        longitude = longitude
-                    )
-
-                println(
-                    "NEARBY DEBUG → RPC returned ${restaurants.size} restaurants"
-                )
-
-                restaurants.forEach {
-                    println(
-                        "NEARBY DEBUG → " +
-                                "${it.name}: ${it.distanceMeters}m"
-                    )
-                }
+                    withContext(Dispatchers.IO) {
+                        restaurantRepository.getNearbyRestaurants(
+                            latitude = latitude,
+                            longitude = longitude
+                        )
+                    }
 
                 _uiState.update {
                     it.copy(
@@ -394,6 +380,116 @@ class HomeViewModel(
                         locationError =
                             e.message
                                 ?: "Unable to load nearby restaurants"
+                    )
+                }
+            }
+        }
+    }
+
+    fun loadConsumerNotificationState() {
+        viewModelScope.launch {
+
+            try {
+
+                val userId =
+                    supabase.auth.currentUserOrNull()?.id
+                        ?: return@launch
+
+                val orders =
+                    withContext(Dispatchers.IO) {
+                        orderRepository.getAllConsumerOrders(
+                            userId
+                        )
+                    }
+
+                val now = java.time.Instant.now()
+                val localNow = java.time.LocalTime.now()
+
+                val hasNotification =
+                    orders.any { order ->
+
+                        val completedNotification =
+                            if (
+                                order.status.equals(
+                                    "COMPLETED",
+                                    ignoreCase = true
+                                )
+                            ) {
+                                order.completedAt
+                                    ?.let {
+                                        runCatching {
+                                            java.time.Instant.parse(it)
+                                        }.getOrNull()
+                                    }
+                                    ?.let { completedAt ->
+                                        java.time.Duration
+                                            .between(
+                                                completedAt,
+                                                now
+                                            )
+                                            .toHours() <= 24
+                                    } == true
+                            } else {
+                                false
+                            }
+
+                        val pickupNotification =
+                            if (
+                                !order.status.equals(
+                                    "COMPLETED",
+                                    ignoreCase = true
+                                )
+                            ) {
+
+                                runCatching {
+
+                                    val formatter =
+                                        java.time.format.DateTimeFormatter
+                                            .ofPattern(
+                                                "hh:mm a",
+                                                java.util.Locale.ENGLISH
+                                            )
+
+                                    val pickupStart =
+                                        java.time.LocalTime.parse(
+                                            order.pickupTime
+                                                .substringBefore("-")
+                                                .trim(),
+                                            formatter
+                                        )
+
+                                    val minutesUntil =
+                                        java.time.Duration
+                                            .between(
+                                                localNow,
+                                                pickupStart
+                                            )
+                                            .toMinutes()
+
+                                    minutesUntil in 0..60
+
+                                }.getOrDefault(false)
+
+                            } else {
+                                false
+                            }
+
+                        completedNotification ||
+                                pickupNotification
+                    }
+
+                _uiState.update {
+                    it.copy(
+                        hasNotifications =
+                            hasNotification
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                _uiState.update {
+                    it.copy(
+                        hasNotifications = false
                     )
                 }
             }

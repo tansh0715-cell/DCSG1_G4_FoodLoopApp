@@ -27,7 +27,7 @@ fun InfoItem(title: String, value: String) {
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(96.dp)
             .border(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)),
                 shape = RoundedCornerShape(8.dp)

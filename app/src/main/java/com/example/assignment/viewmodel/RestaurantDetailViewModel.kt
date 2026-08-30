@@ -68,7 +68,8 @@ class RestaurantDetailViewModel(
                         .getAllFoodListings()
                         .filter {
                             it.restaurant == restaurantId &&
-                                    it.quantity > 0
+                                    it.quantity > 0 &&
+                                    !it.isPickupTimeEnded()
                         }
 
                 _uiState.value =

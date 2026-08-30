@@ -75,6 +75,7 @@ fun AppNavigation(
     val orderRepository = remember {
         OrderRepository(supabase)
     }
+
     val currentUserId = supabase.auth.currentUserOrNull()?.id.orEmpty()
     val context = LocalContext.current
     val userPreferencesManager = remember { UserPreferencesManager(context) }
@@ -178,10 +179,14 @@ fun AppNavigation(
         }
 
         composable(
-            route = "restaurant/{restaurantId}",
+            route = "restaurant/{restaurantId}?distanceMeters={distanceMeters}",
             arguments = listOf(
                 navArgument("restaurantId") {
                     type = NavType.StringType
+                },
+                navArgument("distanceMeters") {
+                    type = NavType.StringType
+                    defaultValue = ""
                 }
             )
         ) { entry ->
@@ -190,6 +195,11 @@ fun AppNavigation(
                 entry.arguments
                     ?.getString("restaurantId")
                     .orEmpty()
+
+            val distanceMeters =
+                entry.arguments
+                    ?.getString("distanceMeters")
+                    ?.toDoubleOrNull()
 
             val restaurantViewModel:
                     RestaurantDetailViewModel =
@@ -211,12 +221,10 @@ fun AppNavigation(
             }
 
             RestaurantDetailScreen(
-                innerPadding =
-                    PaddingValues(),
-                navController =
-                    navController,
-                viewModel =
-                    restaurantViewModel
+                innerPadding = PaddingValues(),
+                navController = navController,
+                viewModel = restaurantViewModel,
+                distanceMeters = distanceMeters
             )
         }
 
@@ -474,6 +482,7 @@ fun AppNavigation(
 
                 OrderScreen(
                     innerPadding = innerPadding,
+                    navController = navController,
                     orderViewModel = orderViewModel
                 )
             }
@@ -586,14 +595,45 @@ fun AppNavigation(
 
         composable("NOTIFICATIONS") {
 
-            NotificationScreen(
-                innerPadding = PaddingValues()
-            )
+            val notificationViewModel: OrderViewModel =
+                viewModel(
+                    factory = OrderViewModelFactory(
+                        orderRepository,
+                        currentUserId,
+                        foodRepository,
+                        restaurantRepository
+                    )
+                )
+
+            Scaffold(
+                bottomBar = {
+                    AppNavigationBar(
+                        navController = navController,
+                        isConsumer = true
+                    )
+                }
+            ) { innerPadding ->
+
+                NotificationScreen(
+                    innerPadding = innerPadding,
+                    orderViewModel = notificationViewModel
+                )
+            }
         }
         composable("PROVIDER_NOTIFICATIONS") {
+            val notificationViewModel: OrderViewModel =
+                viewModel(
+                    factory = OrderViewModelFactory(
+                        orderRepository,
+                        currentUserId,
+                        foodRepository,
+                        restaurantRepository
+                    )
+                )
 
             ProviderNotificationScreen(
-                innerPadding = PaddingValues()
+                innerPadding = PaddingValues(),
+                orderViewModel = notificationViewModel
             )
         }
 

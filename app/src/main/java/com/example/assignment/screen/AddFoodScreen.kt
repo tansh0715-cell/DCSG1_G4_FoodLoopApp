@@ -33,13 +33,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults.colors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,7 +49,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,7 +56,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.assignment.R
@@ -69,7 +63,6 @@ import com.example.assignment.components.FormField
 import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.ui.theme.PrimaryGreen
 import com.example.assignment.viewmodel.AddFoodViewModel
-import java.sql.Time
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -108,7 +101,40 @@ fun AddFoodScreen(
     var inputMinute by remember { mutableStateOf("") }
     var inputAmPm by remember { mutableStateOf("AM") }
     var timeInputError by remember { mutableStateOf<String?>(null) }
+    var pickupRangeError by remember {
+        mutableStateOf(false)
+    }
+
     var amPmExpanded by remember { mutableStateOf(false) }
+
+    val pickupTimeValid =
+        if (
+            selectedStartTime.isNotBlank() &&
+            selectedEndTime.isNotBlank()
+        ) {
+            runCatching {
+                val formatter =
+                    DateTimeFormatter.ofPattern(
+                        "hh:mm a",
+                        Locale.ENGLISH
+                    )
+
+                val start = LocalTime.parse(
+                    selectedStartTime,
+                    formatter
+                )
+
+                val end = LocalTime.parse(
+                    selectedEndTime,
+                    formatter
+                )
+
+                start.isBefore(end)
+
+            }.getOrDefault(false)
+        } else {
+            true
+        }
 
     //sync pickupTime from UiState
     LaunchedEffect(uiState.pickupTime) {
@@ -374,6 +400,15 @@ fun AddFoodScreen(
             }
         }
 
+        if (pickupRangeError) {
+            Text(
+                text = "Pickup end time must be later than start time.",
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
         // doted line frame (food upload)
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
@@ -468,7 +503,14 @@ fun AddFoodScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { viewModel.submitFood() },
+            onClick = {
+                if(pickupTimeValid){
+                    pickupRangeError = false
+                    viewModel.submitFood()
+                }else{
+                    pickupRangeError = true
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -570,11 +612,11 @@ fun AddFoodScreen(
                                     keyboardType = KeyboardType.Number
                                 ),
                                 colors = colors(
-                                    focusedBorderColor = PrimaryGreen,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = Color.Gray,
-                                    focusedLabelColor = PrimaryGreen,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
                                     unfocusedLabelColor = Color.Gray,
-                                    cursorColor = PrimaryGreen
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 ),
                                 modifier = Modifier.weight(1f)
                             )
@@ -594,11 +636,11 @@ fun AddFoodScreen(
                                     keyboardType = KeyboardType.Number
                                 ),
                                 colors = colors(
-                                    focusedBorderColor = PrimaryGreen,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = Color.Gray,
-                                    focusedLabelColor = PrimaryGreen,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
                                     unfocusedLabelColor = Color.Gray,
-                                    cursorColor = PrimaryGreen
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 ),
                                 modifier = Modifier.weight(1f)
                             )

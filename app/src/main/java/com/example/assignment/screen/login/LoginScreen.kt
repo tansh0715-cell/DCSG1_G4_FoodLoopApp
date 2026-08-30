@@ -79,7 +79,6 @@ fun LoginScreen(
             try {
                 val userId = currentUser.id
 
-                // 查询是否是 Food Saver
                 val saver = supabase.from("food_savers")
                     .select {
                         filter { eq("user_id", userId) }
@@ -121,7 +120,6 @@ fun LoginScreen(
         return
     }
 
-    // 正常显示登录表单
     Column(
         modifier = Modifier
             .fillMaxSize()
