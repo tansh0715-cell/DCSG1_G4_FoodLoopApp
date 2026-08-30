@@ -3,50 +3,28 @@ package com.example.assignment.util
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import androidx.annotation.RequiresApi
-import com.example.assignment.BuildConfig
+import com.example.assignment.R
 import com.example.assignment.model.Restaurant
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
-private const val GOOGLE_MAPS_API_KEY =
-    BuildConfig.GOOGLE_MAPS_API_KEY
-
-fun googleMapThumbnailUrl(
+fun mapboxStaticMapUrl(
+    context: Context,
+    longitude: Double,
     latitude: Double,
-    longitude: Double
+    zoom: Int = 15,
+    width: Int = 800,
+    height: Int = 400
 ): String {
 
-    return "https://maps.googleapis.com/maps/api/staticmap" +
-            "?center=$latitude,$longitude" +
-            "&zoom=16" +
-            "&size=600x300" +
-            "&scale=2" +
-            "&maptype=roadmap" +
-            "&markers=color:red%7C$latitude,$longitude" +
-            "&key=$GOOGLE_MAPS_API_KEY"
-}
-
-@RequiresApi(Build.VERSION_CODES.KITKAT)
-fun googleMapThumbnailUrl(
-    address: String
-): String {
-
-    val encodedAddress =
-        URLEncoder.encode(
-            address,
-            StandardCharsets.UTF_8.toString()
+    val accessToken =
+        context.getString(
+            R.string.mapbox_access_token
         )
 
-    return "https://maps.googleapis.com/maps/api/staticmap" +
-            "?center=$encodedAddress" +
-            "&zoom=16" +
-            "&size=600x300" +
-            "&scale=2" +
-            "&maptype=roadmap" +
-            "&markers=color:red%7C$encodedAddress" +
-            "&key=$GOOGLE_MAPS_API_KEY"
+    return "https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/" +
+            "pin-s+e74c3c($longitude,$latitude)/" +
+            "$longitude,$latitude,$zoom/" +
+            "${width}x$height" +
+            "?access_token=$accessToken"
 }
 
 fun openGoogleMaps(

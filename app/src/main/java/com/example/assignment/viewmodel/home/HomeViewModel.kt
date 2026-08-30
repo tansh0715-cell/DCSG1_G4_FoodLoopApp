@@ -1,8 +1,8 @@
-package com.example.assignment.viewmodel
+package com.example.assignment.viewmodel.home
 
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import co.touchlab.kermit.Logger.Companion.e
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.NearbyRestaurantRow
@@ -18,12 +18,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Duration
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-data class HomeUiState(
+data class  HomeUiState(
     val isLoading: Boolean = false,
     val foods: List<FoodListing> = emptyList(),
 
     val hasNotifications: Boolean = false,
+    val consumerNotificationsViewed: Boolean = false,
+
+    val hasProviderNotifications: Boolean = false,
+    val providerNotificationsViewed: Boolean = false,
+    val providerNotificationPopupShown: Boolean = false,
 
     val selectedCategoryIndex: Int = 0,
     val categories: List<String> = listOf("All", "Meals", "Bakery", "Snacks"),
@@ -43,7 +52,10 @@ data class HomeUiState(
     //provider dashboard statistics
     val totalFoodCount: Int = 0,
     val activeFoodCount: Int = 0,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+
+    //notification popup (inside app)
+    val notificationPopupShown: Boolean = false
 )
 class HomeViewModel(
     private val foodRepository: FoodRepository,
@@ -72,7 +84,6 @@ class HomeViewModel(
             }
 
             try {
-                // 1. Food
                 // Get foods belonging to this provider
                 allFoods = foodRepository
                     .getFoodListingByProvider(providerId)
@@ -83,14 +94,12 @@ class HomeViewModel(
                     food.quantity > 0
                 }
 
-                // 2. Restaurant
                 // Get provider's restaurant
                 val restaurant = restaurantRepository
                     .getRestaurantByProvider(providerId)
                 val provider = authRepository
                     .getFoodProvider(providerId)
 
-                // 3. Orders
                 // Get provider orders and use the count
                 val providerOrders = orderRepository
                     .getProviderOrders(
@@ -98,7 +107,58 @@ class HomeViewModel(
                     )
                 val reservationCount = providerOrders.size
 
-                // 4. Category
+                val now = java.time.Instant.now()
+                val localNow = LocalTime.now()
+
+                val hasProviderNotifications =
+                    providerOrders.any { order ->
+
+                        // New / pending reservation
+                        val newOrderNotification =
+                            !order.status.equals(
+                                "COMPLETED",
+                                ignoreCase = true
+                            ) &&
+                                    runCatching {
+                                        val createdAt =
+                                            java.time.Instant.parse(
+                                                order.createdAt
+                                            )
+
+                                        Duration
+                                            .between(createdAt, now)
+                                            .toMinutes() in 0..1440
+
+                                    }.getOrDefault(false)
+
+
+                        // Pickup time approaching
+                        val pickupNotification = !order.status.equals(
+                            "COMPLETED", ignoreCase = true
+                        ) && runCatching {
+
+                            val formatter = DateTimeFormatter.ofPattern(
+                                "h:mm a", Locale.ENGLISH
+                            )
+
+                            val pickupStart = LocalTime.parse(
+                                order.pickupTime.substringBefore("-").trim(), formatter
+                            )
+
+                            val minutesUntil = Duration.between(
+                                    localNow, pickupStart
+                                ).toMinutes()
+
+                            minutesUntil in 0..60
+
+                        }.getOrDefault(false)
+
+                        newOrderNotification || pickupNotification
+
+                    } || allFoods.any {
+                        it.quantity <= 0
+                    }
+
                 //Apply currently selected category
                 val selectedCategory =
                     _uiState.value.categories.getOrNull(
@@ -116,7 +176,6 @@ class HomeViewModel(
                         }
                     }
 
-                // 5. Update
                 //update everything together
                 _uiState.update {
                     it.copy(
@@ -126,6 +185,7 @@ class HomeViewModel(
                         reservationCount = reservationCount,
                         totalFoodCount = totalFoodCount,
                         activeFoodCount = activeFoodCount,
+                        hasProviderNotifications = hasProviderNotifications,
                         errorMessage = null
                     )
                 }
@@ -145,6 +205,37 @@ class HomeViewModel(
     }
     fun loadProviderFoods(providerId: String) {
         loadFoods(providerId)
+    }
+
+    fun markProviderNotificationsViewed() {
+        _uiState.update {
+            it.copy(
+                providerNotificationsViewed = true
+            )
+        }
+    }
+    fun markProviderNotificationPopupShown() {
+        _uiState.update {
+            it.copy(
+                providerNotificationPopupShown = true
+            )
+        }
+    }
+
+    fun markConsumerNotificationsViewed() {
+        _uiState.update {
+            it.copy(
+                consumerNotificationsViewed = true
+            )
+        }
+    }
+
+    fun markConsumerNotificationPopupShown() {
+        _uiState.update {
+            it.copy(
+                notificationPopupShown = true
+            )
+        }
     }
 
     private fun loadFoods(providerId: String?) {
@@ -308,11 +399,11 @@ class HomeViewModel(
             return
         }
 
-        val distance = android.location.Location("").apply {
+        val distance = Location("").apply {
             this.latitude = oldLat
             this.longitude = oldLon
         }.distanceTo(
-            android.location.Location("").apply {
+            Location("").apply {
                 this.latitude = latitude
                 this.longitude = longitude
             }
@@ -403,7 +494,7 @@ class HomeViewModel(
                     }
 
                 val now = java.time.Instant.now()
-                val localNow = java.time.LocalTime.now()
+                val localNow = LocalTime.now()
 
                 val hasNotification =
                     orders.any { order ->
@@ -422,12 +513,12 @@ class HomeViewModel(
                                         }.getOrNull()
                                     }
                                     ?.let { completedAt ->
-                                        java.time.Duration
+                                        Duration
                                             .between(
                                                 completedAt,
                                                 now
                                             )
-                                            .toHours() <= 24
+                                            .toHours() in 0..1440
                                     } == true
                             } else {
                                 false
@@ -444,14 +535,14 @@ class HomeViewModel(
                                 runCatching {
 
                                     val formatter =
-                                        java.time.format.DateTimeFormatter
+                                        DateTimeFormatter
                                             .ofPattern(
                                                 "hh:mm a",
-                                                java.util.Locale.ENGLISH
+                                                Locale.ENGLISH
                                             )
 
                                     val pickupStart =
-                                        java.time.LocalTime.parse(
+                                        LocalTime.parse(
                                             order.pickupTime
                                                 .substringBefore("-")
                                                 .trim(),
@@ -459,7 +550,7 @@ class HomeViewModel(
                                         )
 
                                     val minutesUntil =
-                                        java.time.Duration
+                                        Duration
                                             .between(
                                                 localNow,
                                                 pickupStart

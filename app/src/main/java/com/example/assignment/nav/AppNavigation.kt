@@ -26,17 +26,17 @@ import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.data.supabase.supabase
-import com.example.assignment.screen.AddFoodScreen
+import com.example.assignment.screen.food.AddFoodScreen
 import com.example.assignment.screen.AppNavigationBar
-import com.example.assignment.screen.FoodDetailScreen
-import com.example.assignment.screen.HomeScreen
-import com.example.assignment.screen.NotificationScreen
-import com.example.assignment.screen.OrderDetailScreen
-import com.example.assignment.screen.OrderScreen
-import com.example.assignment.screen.ProviderHomeScreen
-import com.example.assignment.screen.ProviderNotificationScreen
-import com.example.assignment.screen.ProviderOrderScreen
-import com.example.assignment.screen.RestaurantDetailScreen
+import com.example.assignment.screen.food.FoodDetailScreen
+import com.example.assignment.screen.home.HomeScreen
+import com.example.assignment.screen.notification.NotificationScreen
+import com.example.assignment.screen.order.OrderDetailScreen
+import com.example.assignment.screen.order.OrderScreen
+import com.example.assignment.screen.home.ProviderHomeScreen
+import com.example.assignment.screen.notification.ProviderNotificationScreen
+import com.example.assignment.screen.order.ProviderOrderScreen
+import com.example.assignment.screen.restaurant.RestaurantDetailScreen
 import com.example.assignment.screen.inventoryModule.AddItemScreen
 import com.example.assignment.screen.inventoryModule.InventoryScreen
 import com.example.assignment.screen.login.ForgotPasswordScreen
@@ -46,16 +46,16 @@ import com.example.assignment.screen.payment.PaymentScreen
 import com.example.assignment.screen.profileModule.ProfileScreen
 import com.example.assignment.screen.register.RegisterScreen
 import com.example.assignment.screen.register.RegisterTypeScreen
-import com.example.assignment.viewmodel.AddFoodViewModel
-import com.example.assignment.viewmodel.AddFoodViewModelFactory
-import com.example.assignment.viewmodel.FoodDetailViewModel
-import com.example.assignment.viewmodel.FoodDetailViewModelFactory
-import com.example.assignment.viewmodel.HomeViewModel
-import com.example.assignment.viewmodel.HomeViewModelFactory
-import com.example.assignment.viewmodel.OrderViewModel
-import com.example.assignment.viewmodel.OrderViewModelFactory
-import com.example.assignment.viewmodel.RestaurantDetailViewModel
-import com.example.assignment.viewmodel.RestaurantDetailViewModelFactory
+import com.example.assignment.viewmodel.food.AddFoodViewModel
+import com.example.assignment.viewmodel.food.AddFoodViewModelFactory
+import com.example.assignment.viewmodel.food.FoodDetailViewModel
+import com.example.assignment.viewmodel.food.FoodDetailViewModelFactory
+import com.example.assignment.viewmodel.home.HomeViewModel
+import com.example.assignment.viewmodel.home.HomeViewModelFactory
+import com.example.assignment.viewmodel.order.OrderViewModel
+import com.example.assignment.viewmodel.order.OrderViewModelFactory
+import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModel
+import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModelFactory
 import io.github.jan.supabase.auth.auth
 
 @Composable
@@ -317,22 +317,12 @@ fun AppNavigation(
                             quantity ->
 
                         if (
-                            quantity <=
-                            foodState.food!!.quantity
+                            quantity >= 1 &&
+                            quantity <= foodState.food!!.quantity
                         ) {
 
-                            orderViewModel.createOrder(
-                                foodId =
-                                    selectedFoodId,
-
-                                quantity =
-                                    quantity,
-
-                                onSuccess = { createdOrder ->
-                                    navController.navigate(
-                                        "ORDER_DETAIL/${createdOrder.id}"
-                                    )
-                                }
+                            navController.navigate(
+                                "PAYMENT/$selectedFoodId/$quantity"
                             )
                         }
                     }
@@ -428,49 +418,110 @@ fun AppNavigation(
         }
 
         composable(
-            route = "payment/{orderId}",
-            arguments = listOf(navArgument("orderId") {
-                type = NavType.StringType
-            }
+            route = "PAYMENT/{foodId}/{quantity}",
+            arguments = listOf(
+                navArgument("foodId") {
+                    type = NavType.StringType
+                },
+                navArgument("quantity"){
+                    type = NavType.IntType
+                }
             )
         ) { backStackEntry ->
-            val orderId = backStackEntry.arguments?.getString("orderId").orEmpty()
-
-            val orderViewModel: OrderViewModel = viewModel(
-                factory = OrderViewModelFactory(
-                    orderRepository = orderRepository,
-                    currentUserId = currentUserId,
-                    foodRepository = foodRepository,
-                    restaurantRepository = restaurantRepository
+            val foodId = backStackEntry.arguments?.getString("foodId").orEmpty()
+            val quantity = backStackEntry.arguments?.getInt("quantity")?: 1
+            // Load real food from Supabase
+            val foodViewModel:
+                    FoodDetailViewModel =
+                viewModel(
+                    factory =
+                        FoodDetailViewModelFactory(
+                            foodRepository,
+                            restaurantRepository
+                        )
                 )
-            )
+            val foodState by foodViewModel.uiState.collectAsStateWithLifecycle()
 
-            val order by orderViewModel.selectedOrder.collectAsStateWithLifecycle()
-            val food by orderViewModel.selectedFood.collectAsStateWithLifecycle()
 
-            LaunchedEffect(orderId) {
-                orderViewModel.loadOrderByIdDirectly(orderId)
+            // Order ViewModel
+            val orderViewModel:
+                    OrderViewModel =
+                viewModel(
+                    factory =
+                        OrderViewModelFactory(
+                            orderRepository,
+                            currentUserId,
+                            foodRepository,
+                            restaurantRepository
+                        )
+                )
+
+            LaunchedEffect(foodId) {
+                foodViewModel.load(foodId)
             }
 
-            when {
-                order == null -> Box(
+            if(foodState.isLoading){
+                Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Loading order...")
+                ){
+                    Text("Loading payment...")
                 }
-                else -> PaymentScreen(
-                    order = order!!,
-                    foodName = food?.name,
+            } else if (foodState.food != null) {
+
+                val food = foodState.food!!
+                val total = food.price * quantity
+
+                PaymentScreen(
+
+                    foodName = food.name,
+                    quantity = quantity,
+                    total = total,
                     onPaymentSuccess = {
-                        navController.navigate("ORDER_DETAIL/${order!!.id}") {
-                            popUpTo("payment/${order!!.id}") { inclusive = true }
-                        }
+
+                        // Payment succeeded -> create the real order.
+                        orderViewModel.createOrder(
+                            foodId = food.id,
+                            quantity = quantity,
+                            paymentSuccess = true,
+
+                            onSuccess = { createdOrder ->
+                                navController.navigate(
+                                    "ORDER"
+                                ) {
+                                    popUpTo(
+                                        "PAYMENT/$foodId/$quantity"
+                                    ) {
+                                        inclusive = true
+                                    }
+                                }
+                            },
+                            onError = { error ->
+                                error.printStackTrace()
+                            }
+                        )
                     },
+
                     onBack = {
                         navController.popBackStack()
                     }
                 )
+
+            } else {
+
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize(),
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        foodState.errorMessage
+                            ?: "Food not found."
+                    )
+                }
             }
         }
 

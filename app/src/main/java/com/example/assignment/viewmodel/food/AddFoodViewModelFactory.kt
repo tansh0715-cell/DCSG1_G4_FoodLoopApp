@@ -1,9 +1,8 @@
-package com.example.assignment.viewmodel
+package com.example.assignment.viewmodel.food
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.assignment.data.repository.FoodRepository
-import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.repository.RestaurantRepository
 
 class AddFoodViewModelFactory(

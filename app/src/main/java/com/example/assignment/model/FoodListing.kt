@@ -59,7 +59,7 @@ data class FoodListing(
                 return false
             }
             val formatter = DateTimeFormatter.ofPattern(
-                "hh:mm a",
+                "h:mm a",
                 Locale.ENGLISH
             )
             val start = LocalTime.parse(

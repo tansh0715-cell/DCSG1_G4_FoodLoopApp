@@ -1,4 +1,4 @@
-package com.example.assignment.viewmodel
+package com.example.assignment.viewmodel.food
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.model.FoodListing
-import com.example.assignment.model.Restaurant
 import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.state.AddFoodUiState
 import kotlinx.coroutines.channels.Channel
@@ -16,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -352,7 +352,7 @@ class AddFoodViewModel(
             }
 
             var  durationMinutes =
-                java.time.Duration.between(start, end).toMinutes()
+                Duration.between(start, end).toMinutes()
 
             // If end time is earlier than start time,
             // assume the pickup period continues into the next day.

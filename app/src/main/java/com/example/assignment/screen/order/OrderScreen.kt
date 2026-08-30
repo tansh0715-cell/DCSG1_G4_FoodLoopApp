@@ -1,6 +1,5 @@
-package com.example.assignment.screen
-import com.example.assignment.model.FoodListing
-import com.example.assignment.model.Restaurant
+package com.example.assignment.screen.order
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,22 +12,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,10 +49,12 @@ import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.components.ProviderOrderCard
 import com.example.assignment.components.ReceiptRow
+import com.example.assignment.components.SaverOrderCard
 import com.example.assignment.model.Order
-import com.example.assignment.viewmodel.OrderViewModel
-import com.example.assignment.util.googleMapThumbnailUrl
+import com.example.assignment.viewmodel.order.OrderViewModel
+import com.example.assignment.util.mapboxStaticMapUrl
 import com.example.assignment.util.openGoogleMaps
+
 @Composable
 fun OrderScreen(
     innerPadding: PaddingValues,
@@ -107,7 +112,7 @@ fun OrderScreen(
                         items = orders,
                         key = { it.id }
                     ) { order ->
-                        SaverReservationCard(
+                        SaverOrderCard (
                             order = order,
                             food = foodsByOrderId[order.id],
                             restaurant = restaurantsByOrderId[order.id],
@@ -131,67 +136,113 @@ fun ProviderOrderScreen(
     orderViewModel: OrderViewModel
 ) {
 
-    val orders by
-    orderViewModel.orders.collectAsStateWithLifecycle()
+    val orders by orderViewModel.orders.collectAsStateWithLifecycle()
 
-    val isLoading by
-    orderViewModel.isLoading.collectAsStateWithLifecycle()
+    val foodsByOrderId by orderViewModel.foodByOrderId.collectAsStateWithLifecycle()
+
+    var selectedOrder by remember {
+        mutableStateOf<Order?>(null)
+    }
+    var showPickupDialog by remember {
+        mutableStateOf(false)
+    }
+    var pickupError by remember {
+        mutableStateOf<String?>(null)
+    }
 
     LaunchedEffect(Unit) {
         orderViewModel.loadProviderOrders()
     }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(
+                MaterialTheme.colorScheme.background
+            )
             .padding(innerPadding)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp)
     ) {
 
-        item {
+        // Header
+        Text(
+            text = "Orders",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.padding(
+                bottom = 16.dp
+            )
+        )
+
+        if (orders.isEmpty()) {
 
             Text(
-                text = "Orders",
-                style = MaterialTheme.typography.headlineMedium
+                text = "No orders yet.",
+                color = MaterialTheme.colorScheme.onSecondary,
+                fontSize = 14.sp
             )
-        }
-
-        if (isLoading) {
-
-            item {
-
-                Text(
-                    text = "Loading orders..."
-                )
-            }
-
-        } else if (orders.isEmpty()) {
-
-            item {
-
-                Text(
-                    text = "No orders.",
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
-            }
 
         } else {
-            items(
-                items = orders,
-                key = { order -> order.id }
-            ) { order ->
 
-                ProviderOrderCard(
-                    order = order,
-                    onMarkDone = {
-                        orderViewModel.markAsDone(
-                            order.id
-                        )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+
+                items(
+                    items = orders,
+                    key = { order -> order.id }
+                ) { order ->
+
+                    ProviderOrderCard(
+                        food = foodsByOrderId[order.id],
+                        order = order,
+                        onMarkDone = {
+
+                            selectedOrder = order
+                            pickupError = null
+                            showPickupDialog = true
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (
+        showPickupDialog &&
+        selectedOrder != null
+    ) {
+        PickupCodeDialog(
+            order = selectedOrder!!,
+            errorMessage = pickupError,
+            onDismiss = {
+                showPickupDialog = false
+                selectedOrder = null
+            },
+
+            onConfirm = { code ->
+
+                orderViewModel.markAsDone(
+
+                    orderId = selectedOrder!!.id,
+                    pickupCode = code,
+                    onSuccess = {
+                        showPickupDialog = false
+                        selectedOrder = null
+                        pickupError = null
+
+                        orderViewModel.loadProviderOrders()
+                    },
+
+                    onError = {
+                        pickupError = "Invalid pickup code."
                     }
                 )
             }
-        }
+        )
     }
 }
 
@@ -209,9 +260,6 @@ fun OrderDetailScreen(
 
     val restaurant by
     orderViewModel.selectedRestaurant.collectAsStateWithLifecycle()
-
-    val isDetailLoading by
-    orderViewModel.isDetailLoading.collectAsStateWithLifecycle()
 
     LaunchedEffect(order.id) {
         orderViewModel.loadOrderDetails(order)
@@ -313,7 +361,7 @@ fun OrderDetailScreen(
 
                     ReceiptRow(
                         "Order ID",
-                        order.id
+                        order.orderCode
                     )
 
                     ReceiptRow(
@@ -369,8 +417,13 @@ fun OrderDetailScreen(
 
             restaurant?.let { currentRestaurant ->
                 AsyncImage(
-                    model = googleMapThumbnailUrl(
-                        currentRestaurant.address
+                    model = mapboxStaticMapUrl(
+                        context = context,
+                        longitude = currentRestaurant.longitude,
+                        latitude = currentRestaurant.latitude,
+                        zoom = 15,
+                        width = 800,
+                        height = 400
                     ),
                     contentDescription = "Restaurant location",
                     contentScale = ContentScale.Crop,
@@ -435,103 +488,89 @@ fun OrderDetailScreen(
 }
 
 @Composable
-private fun SaverReservationCard(
+private fun PickupCodeDialog(
     order: Order,
-    food: FoodListing?,
-    restaurant: Restaurant?,
-    onClick: () -> Unit
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
-    ) {
 
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+    var pickupCode by remember {
+        mutableStateOf("")
+    }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+    AlertDialog(
+        onDismissRequest =
+            onDismiss,
+        title = {
+            Text(
+                text = "Complete Order",
+                fontWeight =
+                    FontWeight.Bold
+            )
+        },
 
-                AsyncImage(
-                    model = food?.imageUrl,
-                    contentDescription = food?.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(70.dp)
-                        .clip(
-                            RoundedCornerShape(12.dp)
-                        )
+        text = {
+            Column {
+                Text(
+                    text =
+                        "Ask the customer for their pickup code."
                 )
-
                 Spacer(
-                    modifier = Modifier.width(16.dp)
+                    modifier =
+                        Modifier.height(12.dp)
+                )
+                OutlinedTextField(
+                    value = pickupCode,
+                    onValueChange = {
+                        pickupCode = it
+                    },
+                    label = {
+                        Text(
+                            "Pickup Code"
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Column(
-                    modifier = Modifier.weight(1f)
+                if (
+                    errorMessage != null
                 ) {
-
-                    Text(
-                        text = food?.name ?: "Reservation",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                    Spacer(
+                        modifier = Modifier.height(6.dp)
                     )
-
                     Text(
-                        text = restaurant?.name ?: "Restaurant",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    )
-
-                    Text(
-                        text = "Pickup: ${order.pickupTime}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
                     )
                 }
             }
+        },
 
-            Spacer(
-                modifier = Modifier.height(12.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-
-                Text(
-                    text = "Qty: ${order.quantity}",
-                    fontSize = 12.sp
-                )
-
-                Text(
-                    text = "RM ${"%.2f".format(order.totalPrice)}",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(10.dp)
-            )
+        confirmButton = {
 
             Button(
-                onClick = onClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                shape = RoundedCornerShape(8.dp)
+                onClick = {
+                    val code = pickupCode.trim().uppercase()
+                    if (code.isNotBlank()) {
+                        onConfirm(code)
+                    }
+                }
             ) {
-                Text("View Details")
+                Text("Confirm")
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+                onClick =
+                    onDismiss
+            ) {
+                Text("Cancel")
             }
         }
-    }
+    )
 }

@@ -1,5 +1,6 @@
-package com.example.assignment.screen
+package com.example.assignment.screen.notification
 
+import java.time.LocalTime
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,9 +41,21 @@ import com.example.assignment.model.FoodListing
 import com.example.assignment.model.NotificationItem
 import com.example.assignment.model.Order
 import com.example.assignment.ui.theme.BackgroundColor
+import com.example.assignment.ui.theme.PrimaryBlue
+import com.example.assignment.ui.theme.PrimaryGreen
+import com.example.assignment.ui.theme.PrimaryYellow
+import com.example.assignment.ui.theme.SafeColor
+import com.example.assignment.ui.theme.SecondaryBlue
+import com.example.assignment.ui.theme.SecondaryYellow
 import com.example.assignment.ui.theme.SoonColor
 import com.example.assignment.ui.theme.textSoonColor
-import com.example.assignment.viewmodel.OrderViewModel
+import com.example.assignment.viewmodel.order.OrderViewModel
+import kotlinx.coroutines.delay
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalTime.parse
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun NotificationScreen(
@@ -53,8 +65,14 @@ fun NotificationScreen(
     val orders by orderViewModel.allNotificationOrders.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        orderViewModel
-            .loadConsumerNotificationOrders()
+        while (true) {
+
+            orderViewModel.loadConsumerNotificationOrders()
+
+            delay(
+                30_000
+            )
+        }
     }
 
     val notifications =
@@ -299,28 +317,16 @@ private fun rememberConsumerNotifications(
     orders: List<Order>
 ): List<ConsumerNotification> {
 
-    val primaryContainer =
-        MaterialTheme.colorScheme.primaryContainer
-
-    val primary =
-        MaterialTheme.colorScheme.primary
-
-    val secondaryContainer =
-        MaterialTheme.colorScheme.secondaryContainer
-
-    val onTertiary =
-        MaterialTheme.colorScheme.onTertiary
-
-    val now = java.time.Instant.now()
+    val now = Instant.now()
 
     val formatter =
-        java.time.format.DateTimeFormatter.ofPattern(
+       DateTimeFormatter.ofPattern(
             "hh:mm a",
-            java.util.Locale.ENGLISH
-        )
+            Locale.ENGLISH
+       )
 
     val localNow =
-        java.time.LocalTime.now()
+        LocalTime.now()
 
     return remember(
         orders,
@@ -330,111 +336,137 @@ private fun rememberConsumerNotifications(
 
         buildList {
             orders.forEach { order ->
-                // Show "successfully collected"
-                if (
-                    order.status.equals(
-                        "COMPLETED",
-                        ignoreCase = true
+                //Reservation confirmed
+                if (!order.status.equals(
+                        "COMPLETED", ignoreCase = true
                     )
                 ) {
 
-                    val completedAt =
-                        order.completedAt?.let {
-                            runCatching {
-                                java.time.Instant.parse(it)
-                            }.getOrNull()
-                        }
+                    val createdAt = runCatching {
+                        Instant.parse(
+                            order.createdAt
+                        )
+                    }.getOrNull()
 
-                    if (completedAt != null) {
+                    if (createdAt != null) {
 
-                        val hoursAgo =
-                            java.time.Duration
-                                .between(
-                                    completedAt,
-                                    now
-                                )
-                                .toHours()
+                        val minutesAgo = Duration.between(
+                            createdAt, now
+                        ).toMinutes()
 
-                        if (hoursAgo <= 24) {
+                        if (minutesAgo in 0..1440) {
 
                             add(
                                 ConsumerNotification(
-                                    id =
-                                        "completed-${order.id}",
 
-                                    title =
-                                        "Your food was successfully collected.",
+                                    id = "confirmed-${order.id}",
 
-                                    timeAgo =
-                                        relativeNotificationTime(
-                                            completedAt,
-                                            now
-                                        ),
+                                    title = "Reservation confirmed. Order #${order.orderCode} is ready for pickup.",
 
-                                    iconResId =
-                                        R.drawable
-                                            .trophy_24dp_cccccc_fill0_wght400_grad0_opsz24,
+                                    timeAgo = relativeNotificationTime(
+                                        createdAt, now
+                                    ),
 
-                                    containerColor =
-                                        primaryContainer,
+                                    iconResId = R.drawable.check_circle_24dp_cccccc_fill0_wght400_grad0_opsz24,
 
-                                    iconTint =
-                                        primary
+                                    containerColor = SafeColor,
+
+                                    iconTint = PrimaryGreen
                                 )
                             )
                         }
                     }
+                }
 
-                } else {
-                    //pickup time approach
-                    val pickupStart =
+                //Completed/Food collected
+                if (order.status.equals(
+                        "COMPLETED", ignoreCase = true
+                    )
+                ) {
+
+                    val completedAt = order.completedAt?.let {
+
                         runCatching {
-
-                            java.time.LocalTime.parse(
-                                order.pickupTime
-                                    .substringBefore("-")
-                                    .trim(),
-                                formatter
-                            )
-
+                            Instant.parse(it)
                         }.getOrNull()
+                    }
+
+                    if (completedAt != null) {
+
+                        val minutesAgo = Duration.between(
+                            completedAt, now
+                        ).toMinutes()
+
+                        if (minutesAgo in 0..1440) {
+
+                            add(
+                                ConsumerNotification(
+
+                                    id = "completed-${order.id}",
+
+                                    title = "Your food was successfully collected.",
+
+                                    timeAgo = relativeNotificationTime(
+                                        completedAt, now
+                                    ),
+
+                                    iconResId = R.drawable.check_circle_24dp_cccccc_fill0_wght400_grad0_opsz24,
+
+                                    containerColor = SafeColor,
+
+                                    iconTint = PrimaryGreen
+                                )
+                            )
+                        }
+                    }
+                }
+
+                //pickup approaching
+                if (!order.status.equals(
+                        "COMPLETED", ignoreCase = true
+                    )
+                ) {
+
+                    val pickupStart = runCatching {
+
+                        parse(
+                            order.pickupTime.substringBefore("-").trim(),
+
+                            DateTimeFormatter.ofPattern(
+                                "h:mm a", Locale.ENGLISH
+                            )
+                        )
+
+                    }.getOrNull()
+
 
                     if (pickupStart != null) {
 
-                        val minutesUntil =
-                            java.time.Duration
-                                .between(
-                                    localNow,
-                                    pickupStart
-                                )
-                                .toMinutes()
+                        val minutesUntil = Duration.between(
+                            localNow, pickupStart
+                        ).toMinutes()
+
 
                         if (minutesUntil in 0..60) {
 
                             add(
                                 ConsumerNotification(
-                                    id =
-                                        "pickup-${order.id}",
 
-                                    title =
-                                        "Your pickup time is approaching. Don't forget to collect your food!",
+                                    id = "pickup-${order.id}",
 
-                                    timeAgo =
-                                        if (minutesUntil == 0L) {
-                                            "Pickup time is now"
-                                        } else {
-                                            "Pickup starts in $minutesUntil min"
-                                        },
+                                    title = "Your pickup time is approaching. Don't forget to collect your food!",
 
-                                    iconResId =
-                                        R.drawable
-                                            .alarm_24dp_2854c5_fill0_wght400_grad0_opsz24,
+                                    timeAgo = if (minutesUntil == 0L) {
+                                        "Pickup time is now"
+                                    } else {
+                                        "Pickup starts in $minutesUntil min"
+                                    },
 
-                                    containerColor =
-                                        onTertiary,
+                                    iconResId = R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24,
 
-                                    iconTint =
-                                        secondaryContainer
+                                    containerColor = SecondaryYellow,
+
+                                    iconTint = PrimaryYellow
                                 )
                             )
                         }
@@ -446,12 +478,12 @@ private fun rememberConsumerNotifications(
 }
 
 private fun relativeNotificationTime(
-    instant: java.time.Instant,
-    now: java.time.Instant
+    instant: Instant,
+    now: Instant
 ): String {
 
     val minutes =
-        java.time.Duration
+        Duration
             .between(
                 instant,
                 now
@@ -501,8 +533,8 @@ private fun rememberProviderNotifications(
     val secondaryContainer =
         MaterialTheme.colorScheme.secondaryContainer
 
-    val now = java.time.Instant.now()
-    val localNow = java.time.LocalTime.now()
+    val now = Instant.now()
+    val localNow = LocalTime.now()
 
     return remember(
         orders,
@@ -515,7 +547,7 @@ private fun rememberProviderNotifications(
                 //Only show recent orders.
                 val createdAt =
                     runCatching {
-                        java.time.Instant.parse(
+                        Instant.parse(
                             order.createdAt
                         )
                     }.getOrNull()
@@ -523,10 +555,10 @@ private fun rememberProviderNotifications(
                 if (createdAt != null) {
 
                     val minutesAgo =
-                        java.time.Duration
+                        Duration
                             .between(
                                 createdAt,
-                                java.time.Instant.now()
+                                Instant.now()
                             )
                             .toMinutes()
 
@@ -540,23 +572,15 @@ private fun rememberProviderNotifications(
 
                         add(
                             NotificationItem(
-                                id =
-                                    "new-order-${order.id}",
-                                title =
-                                    "New reservation received. Order #${order.id.takeLast(6)} is waiting for pickup.",
-                                timeAgo =
-                                    relativeNotificationTime(
-                                        createdAt,
-                                        now
-                                    ),
-                                iconResId =
-                                    R.drawable
-                                        .alarm_24dp_2854c5_fill0_wght400_grad0_opsz24,
+                                id = "new-order-${order.id}",
+                                title = "New reservation received. Order #${order.orderCode} is waiting for pickup.",
+                                timeAgo = relativeNotificationTime(
+                                    createdAt, now
+                                ),
+                                iconResId = R.drawable.alarm_24dp_2854c5_fill0_wght400_grad0_opsz24,
 
-                                containerColor =
-                                    secondaryContainer,
-                                iconTint =
-                                    secondary
+                                containerColor = SecondaryBlue,
+                                iconTint = PrimaryBlue
                             )
                         )
                     }
@@ -565,14 +589,14 @@ private fun rememberProviderNotifications(
                 // 2. Pickup approaching
                 val pickupStart =
                     runCatching {
-                        java.time.LocalTime.parse(
+                        parse(
                             order.pickupTime
                                 .substringBefore("-")
                                 .trim(),
-                            java.time.format.DateTimeFormatter
+                            DateTimeFormatter
                                 .ofPattern(
                                     "hh:mm a",
-                                    java.util.Locale.ENGLISH
+                                    Locale.ENGLISH
                                 )
                         )
                     }.getOrNull()
@@ -580,7 +604,7 @@ private fun rememberProviderNotifications(
                 if (pickupStart != null) {
 
                     val minutesUntil =
-                        java.time.Duration
+                        Duration
                             .between(
                                 localNow,
                                 pickupStart
@@ -633,9 +657,9 @@ private fun rememberProviderNotifications(
                                 id = "sold-out-${food.id}",
                                 title = "${food.name} is sold out",
                                 timeAgo = "Food listing update",
-                                iconResId = R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24,
-                                containerColor = SoonColor,
-                                iconTint = textSoonColor
+                                iconResId = R.drawable.check_circle_24dp_cccccc_fill0_wght400_grad0_opsz24,
+                                containerColor = SafeColor,
+                                iconTint = PrimaryGreen
                             )
                         )
                     }

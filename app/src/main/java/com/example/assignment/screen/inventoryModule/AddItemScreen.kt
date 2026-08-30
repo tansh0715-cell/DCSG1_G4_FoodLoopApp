@@ -30,7 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.assignment.R
-import com.example.assignment.screen.FormField
+import com.example.assignment.components.FormField
 import com.example.assignment.ui.theme.appButtonColors
 
 @Composable

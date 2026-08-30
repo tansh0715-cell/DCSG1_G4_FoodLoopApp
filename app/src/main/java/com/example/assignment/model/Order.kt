@@ -33,6 +33,9 @@ data class Order(
     @SerialName("payment_success")
     val paymentSuccess: Boolean,
 
+    @SerialName("order_code")
+    val orderCode: String,
+
     val status: String,
 
     @SerialName("created_at")

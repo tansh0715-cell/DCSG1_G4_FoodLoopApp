@@ -1,4 +1,4 @@
-package com.example.assignment.screen
+package com.example.assignment.screen.restaurant
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -40,7 +40,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.components.RestaurantInfoRow
-import com.example.assignment.viewmodel.RestaurantDetailViewModel
+import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModel
 
 @Composable
 fun RestaurantDetailScreen(

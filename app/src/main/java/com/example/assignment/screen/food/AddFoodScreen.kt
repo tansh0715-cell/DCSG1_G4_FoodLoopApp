@@ -1,4 +1,4 @@
-package com.example.assignment.screen
+package com.example.assignment.screen.food
 
 import android.net.Uri
 import android.widget.Toast
@@ -61,8 +61,7 @@ import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.components.FormField
 import com.example.assignment.state.AddFoodEvent
-import com.example.assignment.ui.theme.PrimaryGreen
-import com.example.assignment.viewmodel.AddFoodViewModel
+import com.example.assignment.viewmodel.food.AddFoodViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -113,25 +112,47 @@ fun AddFoodScreen(
             selectedEndTime.isNotBlank()
         ) {
             runCatching {
+
                 val formatter =
                     DateTimeFormatter.ofPattern(
                         "hh:mm a",
                         Locale.ENGLISH
                     )
 
-                val start = LocalTime.parse(
-                    selectedStartTime,
-                    formatter
-                )
+                val start =
+                    LocalTime.parse(
+                        selectedStartTime,
+                        formatter
+                    )
 
-                val end = LocalTime.parse(
-                    selectedEndTime,
-                    formatter
-                )
+                val end =
+                    LocalTime.parse(
+                        selectedEndTime,
+                        formatter
+                    )
 
-                start.isBefore(end)
+                var startMinutes =
+                    start.toSecondOfDay() / 60
+
+                var endMinutes =
+                    end.toSecondOfDay() / 60
+
+                // Allow pickup ranges that pass midnight.
+                if (endMinutes < startMinutes) {
+                    endMinutes += 24 * 60
+                }
+
+                val durationMinutes =
+                    endMinutes - startMinutes
+
+                // Pickup time must be:
+                // 1. Later than start
+                // 2. No longer than 4 hours
+                durationMinutes > 0 &&
+                        durationMinutes <= 4 * 60
 
             }.getOrDefault(false)
+
         } else {
             true
         }

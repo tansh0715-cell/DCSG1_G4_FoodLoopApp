@@ -1,16 +1,13 @@
-package com.example.assignment.viewmodel
+package com.example.assignment.viewmodel.food
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.RestaurantRepository
 
-class RestaurantDetailViewModelFactory(
-    private val restaurantRepository:
-    RestaurantRepository,
-
-    private val foodRepository:
-    FoodRepository
+class FoodDetailViewModelFactory(
+    private val foodRepository: FoodRepository,
+    private val restaurantRepository: RestaurantRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -20,15 +17,13 @@ class RestaurantDetailViewModelFactory(
 
         if (
             modelClass.isAssignableFrom(
-                RestaurantDetailViewModel::class.java
+                FoodDetailViewModel::class.java
             )
         ) {
 
-            return RestaurantDetailViewModel(
-                restaurantRepository =
-                    restaurantRepository,
-                foodRepository =
-                    foodRepository
+            return FoodDetailViewModel(
+                foodRepository,
+                restaurantRepository
             ) as T
         }
 

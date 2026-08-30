@@ -16,7 +16,8 @@ data class CreateOrderParams(
 @Serializable
 data class MarkDoneParams(
     val p_order_id: String,
-    val p_provider_id: String
+    val p_provider_id: String,
+    val p_pickup_code: String
 )
 @Serializable
 data class GetProviderOrdersParams(
@@ -30,17 +31,20 @@ class OrderRepository(
     suspend fun createOrder(
         consumerId: String,
         foodId: String,
-        quantity: Int
+        quantity: Int,
+        paymentSuccess: Boolean
     ): Order {
 
-        val params = CreateOrderParams(
-            p_consumer_id = consumerId,
-            p_food_id = foodId,
-            p_quantity = quantity,
-            p_payment_success = true
-        )
+        val params =
+            CreateOrderParams(
+                p_consumer_id = consumerId,
+                p_food_id = foodId,
+                p_quantity = quantity,
+                p_payment_success = paymentSuccess
+            )
 
-        return supabase.postgrest
+        return supabase
+            .postgrest
             .rpc(
                 "create_food_order",
                 params
@@ -88,15 +92,20 @@ class OrderRepository(
 
     suspend fun markOrderDone(
         orderId: String,
-        providerId: String
+        providerId: String,
+        pickupCode: String
     ): Order {
-
-        return supabase.postgrest
+        return supabase
+            .postgrest
             .rpc(
                 "mark_order_done",
-                MarkDoneParams(p_order_id = orderId, p_provider_id = providerId)
+                MarkDoneParams(
+                    p_order_id = orderId,
+                    p_provider_id = providerId,
+                    p_pickup_code = pickupCode
+                )
             )
-            .decodeSingle()
+            .decodeSingle<Order>()
     }
 
     suspend fun getOrderById(orderId: String): Order? {

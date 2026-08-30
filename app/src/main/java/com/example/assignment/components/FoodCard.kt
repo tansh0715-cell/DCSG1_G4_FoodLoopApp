@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -37,12 +36,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.assignment.model.FoodListing
 import com.example.assignment.model.FoodStatus
+import com.example.assignment.model.getDiscountBadgeColor
 
 @Composable
 fun FoodCard(
@@ -58,9 +57,7 @@ fun FoodCard(
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable(
-                enabled = !isSoldOut || isProvider,
-                onClick = {onCardClick()}
-            ),
+                enabled = !isSoldOut || isProvider, onClick = { onCardClick() }),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -96,7 +93,9 @@ fun FoodCard(
                 }
             }
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -113,6 +112,7 @@ fun FoodCard(
                     Spacer(modifier = Modifier.size(6.dp))
                     Surface(
                         shape = RoundedCornerShape(6.dp),
+                        color = food.getDiscountBadgeColor()
                     ) {
                         Text(
                             text = "${food.discountPercentage}% OFF",
@@ -252,7 +252,7 @@ fun ProviderFoodCard(
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     val infoColor =
-                        if (isSoldOut) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSecondary
+                        if (isSoldOut) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondary
                     Text(
                         text = "Available: ${food.quantity} left",
                         fontSize = 12.sp,

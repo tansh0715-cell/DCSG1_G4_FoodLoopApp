@@ -1,5 +1,6 @@
 package com.example.assignment.screen.payment
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,16 +24,17 @@ import java.util.Locale
 
 @Composable
 fun PaymentScreen(
-    order: Order,
-    foodName: String? = null,
+    foodName: String,
+    quantity: Int,
+    total: Double,
     onPaymentSuccess: () -> Unit,
     onBack: () -> Unit
 ) {
-    val total = order.totalPrice
     val items = listOf(
-        Triple(foodName ?: "Food Item", total / order.quantity, order.quantity)
+        Triple(
+            foodName, total / quantity, quantity
+        )
     )
-
     var isProcessing by remember { mutableStateOf(false) }
     var selectedPaymentMethod by remember { mutableStateOf("credit_card") }
     val coroutineScope = rememberCoroutineScope()

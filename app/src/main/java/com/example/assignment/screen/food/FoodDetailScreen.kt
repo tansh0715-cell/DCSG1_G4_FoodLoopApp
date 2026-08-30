@@ -1,4 +1,4 @@
-package com.example.assignment.screen
+package com.example.assignment.screen.food
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,9 +54,7 @@ import com.example.assignment.model.FoodListing
 import com.example.assignment.model.FoodStatus
 import com.example.assignment.model.Restaurant
 import com.example.assignment.model.getDiscountBadgeColor
-import com.example.assignment.ui.theme.SafeColor
-import com.example.assignment.ui.theme.SecondaryGreen
-import com.example.assignment.util.googleMapThumbnailUrl
+import com.example.assignment.util.mapboxStaticMapUrl
 import com.example.assignment.util.openGoogleMaps
 
 @Composable
@@ -67,7 +64,7 @@ fun FoodDetailScreen(
     food: FoodListing,
     onBackClick:()-> Unit,
     onPurchase: (String, Int) -> Unit
-){
+) {
     val isSoldOut = food.status == FoodStatus.SOLD_OUT
     var reservationQuantity by remember { mutableStateOf(1) }
     val context = LocalContext.current
@@ -117,9 +114,9 @@ fun FoodDetailScreen(
                     fontSize = 14.sp,
                     textAlign = TextAlign.Justify,
                     color = MaterialTheme.colorScheme.onSecondary,
-                    maxLines = if(descriptionExpanded){
+                    maxLines = if (descriptionExpanded) {
                         Int.MAX_VALUE
-                    }else{
+                    } else {
                         3
                     },
                     overflow = TextOverflow.Ellipsis
@@ -138,8 +135,7 @@ fun FoodDetailScreen(
                         fontSize = 13.sp,
                         modifier = Modifier
                             .clickable {
-                                descriptionExpanded =
-                                    !descriptionExpanded
+                                descriptionExpanded = !descriptionExpanded
                             }
                             .padding(top = 4.dp)
                     )
@@ -215,18 +211,15 @@ fun FoodDetailScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (restaurant != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = restaurant.address,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
 
                     AsyncImage(
-                        model = googleMapThumbnailUrl(
-                            restaurant.latitude,
-                            restaurant.longitude
+                        model = mapboxStaticMapUrl(
+                            context = context,
+                            longitude = restaurant.longitude,
+                            latitude = restaurant.latitude,
+                            zoom = 15,
+                            width = 800,
+                            height = 400
                         ),
                         contentDescription = "Restaurant location",
                         contentScale = ContentScale.Crop,
@@ -238,8 +231,7 @@ fun FoodDetailScreen(
                             )
                             .clickable {
                                 openGoogleMaps(
-                                    context,
-                                    restaurant
+                                    context, restaurant
                                 )
                             }
                     )
@@ -253,7 +245,7 @@ fun FoodDetailScreen(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically){
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(id = R.drawable.location_on_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                     contentDescription = "Location Pin",
@@ -275,6 +267,7 @@ fun FoodDetailScreen(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
+
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Make a Reservation",
@@ -283,151 +276,134 @@ fun FoodDetailScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ){
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Quantity:",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSecondary,
-                                modifier = Modifier.width(70.dp)
-                            )
-
-                            //Minus Button
-                            IconButton(
-                                enabled = !isSoldOut && reservationQuantity > 1,
-                                onClick = {
-                                    if (
-                                        reservationQuantity > 1
-                                    ) {
-                                        reservationQuantity--
-                                    }
-                                },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                            ) {
-                                Text(
-                                    "-",
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-                            }
-
-                            Text(
-                                text = reservationQuantity.toString(),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .padding(horizontal = 4.dp)
-                            )
-
-                            IconButton(
-                                enabled = !isSoldOut && reservationQuantity < food.quantity,
-                                onClick = {
-                                    if (reservationQuantity < food.quantity)
-                                        reservationQuantity++
-                                },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                            ) {
-                                Text(
-                                    "+",
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = "Pickup: ${food.pickupTime}",
+                            text = "Quantity:",
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSecondary
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            modifier = Modifier.width(70.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        //warning frame
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                                .border(
-                                    border = BorderStroke(1.dp,MaterialTheme.colorScheme.onTertiaryContainer),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24),
-                                    contentDescription = "Warning",
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Please confirm your reservation carefully. Once confirmed, the reservation cannot be cancelled.",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            enabled = !isSoldOut &&
-                                    reservationQuantity >= 1 &&
-                                    reservationQuantity <= food.quantity,
-
+                        //Minus Button
+                        IconButton(
+                            enabled = !isSoldOut && reservationQuantity > 1,
                             onClick = {
-                                if (
-                                    reservationQuantity >= 1 &&
-                                    reservationQuantity <= food.quantity
-                                ) {
-                                    onPurchase(
-                                        food.id,
-                                        reservationQuantity
-                                    )
+                                if (reservationQuantity > 1) {
+                                    reservationQuantity--
                                 }
                             },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary
-                            ),
-                            shape = RoundedCornerShape(12.dp)
+                                .size(36.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
                         ) {
                             Text(
-                                text = if (isSoldOut) "Sold Out" else "Reserve Now",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.background
+                                "-",
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+
+                        Text(
+                            text = reservationQuantity.toString(),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .width(40.dp)
+                                .padding(horizontal = 6.dp)
+                        )
+
+                        IconButton(
+                            enabled = !isSoldOut && reservationQuantity < food.quantity,
+                            onClick = {
+                                if (reservationQuantity < food.quantity) reservationQuantity++
+                            },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                        ) {
+                            Text(
+                                "+",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
                             )
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Pickup: ${food.pickupTime}",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    //warning frame
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                border = BorderStroke(
+                                    1.dp, MaterialTheme.colorScheme.onTertiaryContainer
+                                ), shape = RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.warning_24dp_f19e39_fill0_wght400_grad0_opsz24),
+                                contentDescription = "Warning",
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Please confirm your reservation carefully. Once confirmed, the reservation cannot be cancelled.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        enabled = !isSoldOut && reservationQuantity >= 1 && reservationQuantity <= food.quantity,
+
+                        onClick = {
+                            if (reservationQuantity >= 1 && reservationQuantity <= food.quantity) {
+                                onPurchase(
+                                    food.id, reservationQuantity
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (isSoldOut) "Sold Out" else "Reserve Now",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.background
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}

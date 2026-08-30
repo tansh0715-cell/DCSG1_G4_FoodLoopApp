@@ -1,4 +1,4 @@
-package com.example.assignment.viewmodel
+package com.example.assignment.viewmodel.order
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,11 +8,12 @@ import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.model.FoodListing
 import com.example.assignment.model.Order
 import com.example.assignment.model.Restaurant
-import com.example.assignment.model.inventoryModule.Food
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class OrderViewModel(
     private val repository: OrderRepository,
@@ -177,15 +178,17 @@ class OrderViewModel(
     fun createOrder(
         foodId: String,
         quantity: Int,
+        paymentSuccess: Boolean,
         onSuccess: (Order) -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val createdOrder = repository.createOrder(
                     consumerId = currentUserId,
                     foodId = foodId,
-                    quantity = quantity
+                    quantity = quantity,
+                    paymentSuccess = paymentSuccess
                 )
 
                 onSuccess(
@@ -193,7 +196,6 @@ class OrderViewModel(
                 )
 
             } catch (e: Exception) {
-                e.printStackTrace()
                 onError(e)
             }
         }
@@ -205,10 +207,17 @@ class OrderViewModel(
 
             try {
 
-                _orders.value =
+                val loadedOrders =
                     repository.getProviderOrders(
                         currentUserId
                     )
+
+                _orders.value = loadedOrders
+
+                // Load food information for each order
+                loadConsumerRelatedData(
+                    loadedOrders
+                )
 
             } catch (e: Exception) {
 
@@ -242,40 +251,28 @@ class OrderViewModel(
         }
     }
 
-    fun markAsDone(orderId: String) {
-
+    fun markAsDone(
+        orderId: String,
+        pickupCode: String,
+        onSuccess: () -> Unit = {},
+        onError: (Exception) -> Unit = {}
+    ) {
         viewModelScope.launch {
 
             try {
 
                 repository.markOrderDone(
                     orderId = orderId,
-                    providerId = currentUserId
+                    providerId = currentUserId,
+                    pickupCode = pickupCode
                 )
                 loadProviderOrders()
+                onSuccess()
 
             } catch (e: Exception) {
-
-                e.printStackTrace()
-            }
-        }
-    }
-
-    fun loadOrderByIdDirectly(orderId: String) {
-        viewModelScope.launch {
-            _isDetailLoading.value = true
-            try {
-                val order = repository.getOrderById(orderId)
-                _selectedOrder.value = order
-                order?.let {
-                    _selectedFood.value = foodRepository.getFoodListingById(it.foodId)
-                    _selectedRestaurant.value = restaurantRepository.getRestaurantById(it.restaurantId)
+                withContext(Dispatchers.Main.immediate) {
+                    onError(e)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _selectedOrder.value = null
-            } finally {
-                _isDetailLoading.value = false
             }
         }
     }
