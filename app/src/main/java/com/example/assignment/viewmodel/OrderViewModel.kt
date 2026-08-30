@@ -260,4 +260,23 @@ class OrderViewModel(
             }
         }
     }
+
+    fun loadOrderByIdDirectly(orderId: String) {
+        viewModelScope.launch {
+            _isDetailLoading.value = true
+            try {
+                val order = repository.getOrderById(orderId)
+                _selectedOrder.value = order
+                order?.let {
+                    _selectedFood.value = foodRepository.getFoodListingById(it.foodId)
+                    _selectedRestaurant.value = restaurantRepository.getRestaurantById(it.restaurantId)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _selectedOrder.value = null
+            } finally {
+                _isDetailLoading.value = false
+            }
+        }
+    }
 }

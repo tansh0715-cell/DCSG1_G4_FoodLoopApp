@@ -42,6 +42,7 @@ import com.example.assignment.screen.inventoryModule.InventoryScreen
 import com.example.assignment.screen.login.ForgotPasswordScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.login.ResetPasswordScreen
+import com.example.assignment.screen.payment.PaymentScreen
 import com.example.assignment.screen.profileModule.ProfileScreen
 import com.example.assignment.screen.register.RegisterScreen
 import com.example.assignment.screen.register.RegisterTypeScreen
@@ -423,6 +424,53 @@ fun AppNavigation(
                         "Loading reservation details..."
                     )
                 }
+            }
+        }
+
+        composable(
+            route = "payment/{orderId}",
+            arguments = listOf(navArgument("orderId") {
+                type = NavType.StringType
+            }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId").orEmpty()
+
+            val orderViewModel: OrderViewModel = viewModel(
+                factory = OrderViewModelFactory(
+                    orderRepository = orderRepository,
+                    currentUserId = currentUserId,
+                    foodRepository = foodRepository,
+                    restaurantRepository = restaurantRepository
+                )
+            )
+
+            val order by orderViewModel.selectedOrder.collectAsStateWithLifecycle()
+            val food by orderViewModel.selectedFood.collectAsStateWithLifecycle()
+
+            LaunchedEffect(orderId) {
+                orderViewModel.loadOrderByIdDirectly(orderId)
+            }
+
+            when {
+                order == null -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Loading order...")
+                }
+                else -> PaymentScreen(
+                    order = order!!,
+                    foodName = food?.name,
+                    onPaymentSuccess = {
+                        navController.navigate("ORDER_DETAIL/${order!!.id}") {
+                            popUpTo("payment/${order!!.id}") { inclusive = true }
+                        }
+                    },
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
 

@@ -98,4 +98,10 @@ class OrderRepository(
             )
             .decodeSingle()
     }
+
+    suspend fun getOrderById(orderId: String): Order? {
+        return supabase.postgrest["orders"]
+            .select { filter { eq("id", orderId) } }
+            .decodeSingleOrNull()
+    }
 }
