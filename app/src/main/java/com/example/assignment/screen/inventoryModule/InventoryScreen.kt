@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,47 +31,44 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.model.inventoryModule.Food
-import com.example.assignment.model.inventoryModule.FoodStatus
 import com.example.assignment.ui.theme.appButtonColors
 import com.example.assignment.ui.theme.filterColors
-
+import com.example.assignment.viewmodel.inventory.InventoryViewModel
+import androidx.compose.ui.platform.LocalContext
 @Composable
-fun InventoryScreen(innerPadding: PaddingValues, onAdd: () -> Unit) {
-    //data generate here
-    val foods = mutableListOf<Food>(
-        Food("Milk","3L", FoodStatus.EXPIRING_SOON),
-        Food("Eggs","8", FoodStatus.SAFE),
-        Food("Bread","1", FoodStatus.EXPIRED)
-    )
+fun InventoryScreen(innerPadding: PaddingValues, navController: NavController, vm: InventoryViewModel) {
 
-    var userFilter by remember { mutableStateOf(0) }
+    val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        vm.loadInventory(context)
+    }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilterChip(
-                selected = userFilter == 0,
-                onClick = { userFilter = 0 },
+                selected = vm.selectedFilter == 0,
+                onClick = { vm.selectFilter(0) },
                 label = { Text("All") },
                 shape = RoundedCornerShape(50.dp),
                 colors = filterColors()
             );
             FilterChip(
-                selected = userFilter == 1,
-                onClick = { userFilter = 1 },
+                selected = vm.selectedFilter == 1,
+                onClick = { vm.selectFilter(1) },
                 label = { Text("Safe") },
                 shape = RoundedCornerShape(50.dp),
                 colors = filterColors()
             );
             FilterChip(
-                selected = userFilter == 2,
-                onClick = { userFilter = 2 },
+                selected = vm.selectedFilter == 2,
+                onClick = { vm.selectFilter(2) },
                 label = { Text("Expiring soon") },
                 shape = RoundedCornerShape(50.dp),
                 colors = filterColors()
             );
             FilterChip(
-                selected = userFilter == 3,
-                onClick = { userFilter = 3 },
+                selected = vm.selectedFilter == 3,
+                onClick = { vm.selectFilter(3) },
                 label = { Text("Expired") },
                 shape = RoundedCornerShape(50.dp),
                 colors = filterColors()
@@ -78,8 +76,12 @@ fun InventoryScreen(innerPadding: PaddingValues, onAdd: () -> Unit) {
         }
 
         LazyColumn( horizontalAlignment = Alignment.CenterHorizontally) {
-            items(foods) { food -> ElevatedCard(modifier = Modifier.fillMaxSize().heightIn(min = 120.dp, max = 160.dp).padding(horizontal = 25.dp, vertical = 10.dp).clickable(){
+            items(vm.filteredFoods) { food -> ElevatedCard(modifier = Modifier.fillMaxSize()
+                .heightIn(min = 120.dp, max = 160.dp)
+                .padding(horizontal = 25.dp, vertical = 10.dp)
+                .clickable(){
                 //clickable function here
+                navController.navigate("ITEM_DETAIL/${food.item_id}")
 
             }) {
                 Row() {
@@ -90,13 +92,13 @@ fun InventoryScreen(innerPadding: PaddingValues, onAdd: () -> Unit) {
                             style = MaterialTheme.typography.bodyLarge
                         );
                         Text(
-                            text = "Quantity: " + food.quantity,
+                            text = food.reminder_days.toString() + " days until reminder",
                             modifier = Modifier.offset(x = 10.dp,y=20.dp),
                             color = MaterialTheme.colorScheme.onSecondary,
                             style = MaterialTheme.typography.bodyLarge
                         );
                         Text(
-                            text = "Expires",
+                            text = "Expire on " + food.expireDate,
                             modifier = Modifier.offset(x = 10.dp,y=20.dp),
                             color = MaterialTheme.colorScheme.onSecondary,
                             style = MaterialTheme.typography.bodyLarge
@@ -108,7 +110,7 @@ fun InventoryScreen(innerPadding: PaddingValues, onAdd: () -> Unit) {
             }
         }
 
-        ElevatedButton(onClick = { onAdd() },
+        ElevatedButton(onClick = { navController.navigate("ADD_INVENTORY") },
             shape = RoundedCornerShape(size = 20.dp),
             colors =appButtonColors())
         { Icon(painter = painterResource(R.drawable.add_24dp_e3e3e3_fill0_wght200_grad0_opsz24), contentDescription = "add");

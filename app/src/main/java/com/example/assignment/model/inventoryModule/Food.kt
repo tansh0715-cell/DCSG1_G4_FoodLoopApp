@@ -1,16 +1,16 @@
 package com.example.assignment.model.inventoryModule
 
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class Food(
+    val item_id: String,
+    val saver_id: String,
     val name: String,
-    val quantity: String,
-    val status: FoodStatus
+    val reminder_days: Int,
+    val status: String,
+    val expireDate: LocalDate,
+    val image_url: String? = null
 )
 
-enum class FoodStatus { //for inventory filtering
-    SAFE,
-    EXPIRING_SOON,
-    EXPIRED
-}
