@@ -60,6 +60,19 @@ class OrderViewModel(
     private val _restaurantByOrderId = MutableStateFlow<Map<String, Restaurant>>(emptyMap())
     val restaurantByOrderId: StateFlow<Map<String, Restaurant>> = _restaurantByOrderId.asStateFlow()
 
+    // Reservation History (picked up / completed)
+    private val _historyOrders = MutableStateFlow<List<Order>>(emptyList())
+    val historyOrders: StateFlow<List<Order>> = _historyOrders.asStateFlow()
+
+    private val _historyFoodByOrderId = MutableStateFlow<Map<String, FoodListing>>(emptyMap())
+    val historyFoodByOrderId: StateFlow<Map<String, FoodListing>> = _historyFoodByOrderId.asStateFlow()
+
+    private val _historyRestaurantByOrderId = MutableStateFlow<Map<String, Restaurant>>(emptyMap())
+    val historyRestaurantByOrderId: StateFlow<Map<String, Restaurant>> = _historyRestaurantByOrderId.asStateFlow()
+
+    private val _isHistoryLoading = MutableStateFlow(false)
+    val isHistoryLoading: StateFlow<Boolean> = _isHistoryLoading.asStateFlow()
+
     fun loadConsumerOrders() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -109,16 +122,31 @@ class OrderViewModel(
     ){
         viewModelScope.launch {
             try {
-
-                val orders =
-                    repository.getConsumerOrders(
-                        currentUserId
-                    )
-
-                _selectedOrder.value =
-                    orders.firstOrNull {
-                        it.id == orderId
-                    }
+                // Try consumer pending orders first
+                var found: Order? = null
+                try {
+                    val consumerOrders = repository.getConsumerOrders(currentUserId)
+                    found = consumerOrders.firstOrNull { it.id == orderId }
+                } catch (_: Exception) {}
+                // Fallback to all consumer orders (includes COMPLETED)
+                if (found == null) {
+                    try {
+                        val allConsumer = repository.getAllConsumerOrders(currentUserId)
+                        found = allConsumer.firstOrNull { it.id == orderId }
+                    } catch (_: Exception) {}
+                }
+                // Fallback to provider orders
+                if (found == null) {
+                    try {
+                        val providerOrders = repository.getProviderOrders(currentUserId)
+                        found = providerOrders.firstOrNull { it.id == orderId }
+                    } catch (_: Exception) {}
+                }
+                // Last fallback direct fetch
+                if (found == null) {
+                    found = repository.getOrderById(orderId)
+                }
+                _selectedOrder.value = found
 
             } catch (e: Exception) {
 
@@ -276,4 +304,77 @@ class OrderViewModel(
             }
         }
     }
+
+    fun loadReservationHistory() {
+        viewModelScope.launch {
+            _isHistoryLoading.value = true
+            try {
+                // Fetch both consumer (all) and provider orders, then filter COMPLETED
+                val completedOrders = mutableListOf<Order>()
+                var fetchError: Exception? = null
+
+                // Try consumer all orders
+                try {
+                    val consumerAll = repository.getAllConsumerOrders(currentUserId)
+                    completedOrders += consumerAll.filter {
+                        it.status.equals("COMPLETED", ignoreCase = true)
+                    }
+                } catch (e: Exception) {
+                    fetchError = e
+                }
+
+                // Try provider orders as well (handles provider role or mixed)
+                try {
+                    val providerOrders = repository.getProviderOrders(currentUserId)
+                    val providerCompleted = providerOrders.filter {
+                        it.status.equals("COMPLETED", ignoreCase = true)
+                    }
+                    // Add provider completed that not already in list (deduplicate by id)
+                    val existingIds = completedOrders.map { it.id }.toSet()
+                    completedOrders += providerCompleted.filter { it.id !in existingIds }
+                } catch (e: Exception) {
+                    if (completedOrders.isEmpty()) fetchError = e
+                }
+
+                // Fallback: if both RPCs failed or empty, try getConsumerOrders and filter
+                if (completedOrders.isEmpty() && fetchError != null) {
+                    try {
+                        val consumerPending = repository.getConsumerOrders(currentUserId)
+                        completedOrders += consumerPending.filter {
+                            it.status.equals("COMPLETED", ignoreCase = true)
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                // Sort by completedAt / createdAt descending (most recent first)
+                val sorted = completedOrders.sortedByDescending { it.completedAt ?: it.createdAt }
+
+                _historyOrders.value = sorted
+
+                // Load related food/restaurant for history
+                val foods = mutableMapOf<String, FoodListing>()
+                val restaurants = mutableMapOf<String, Restaurant>()
+                sorted.forEach { order ->
+                    try {
+                        foodRepository.getFoodListingById(order.foodId)?.let { foods[order.id] = it }
+                    } catch (_: Exception) {}
+                    try {
+                        restaurantRepository.getRestaurantById(order.restaurantId)?.let { restaurants[order.id] = it }
+                    } catch (_: Exception) {}
+                }
+                _historyFoodByOrderId.value = foods
+                _historyRestaurantByOrderId.value = restaurants
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _historyOrders.value = emptyList()
+                _historyFoodByOrderId.value = emptyMap()
+                _historyRestaurantByOrderId.value = emptyMap()
+            } finally {
+                _isHistoryLoading.value = false
+            }
+        }
+    }
+
+    fun refreshReservationHistory() = loadReservationHistory()
 }

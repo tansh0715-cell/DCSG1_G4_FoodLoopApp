@@ -1,4 +1,4 @@
-package com.example.assignment.model
+package com.example.assignment.model.achievementModule
 
 import kotlinx.serialization.Serializable
 
@@ -8,7 +8,5 @@ data class Achievement(
     val description: String,
     val icon: String,
     val quote: String,
-    val current:Int,
     val target: Int
-    // String replace with painter soon
 )

@@ -21,9 +21,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.assignment.components.AppTopBar
 import com.example.assignment.data.UserPreferencesManager
+import com.example.assignment.data.repository.AchievementRepository
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
+import com.example.assignment.data.repository.ProfileRepository
 import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.data.supabase.supabase
 import com.example.assignment.screen.food.AddFoodScreen
@@ -33,6 +35,7 @@ import com.example.assignment.screen.home.HomeScreen
 import com.example.assignment.screen.notification.NotificationScreen
 import com.example.assignment.screen.order.OrderDetailScreen
 import com.example.assignment.screen.order.OrderScreen
+import com.example.assignment.screen.order.ReservationHistoryScreen
 import com.example.assignment.screen.home.ProviderHomeScreen
 import com.example.assignment.screen.notification.ProviderNotificationScreen
 import com.example.assignment.screen.order.ProviderOrderScreen
@@ -44,9 +47,13 @@ import com.example.assignment.screen.login.ForgotPasswordScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.login.ResetPasswordScreen
 import com.example.assignment.screen.payment.PaymentScreen
+import com.example.assignment.screen.profileModule.AchievementScreen
+import com.example.assignment.screen.profileModule.EditProfileScreen
 import com.example.assignment.screen.profileModule.ProfileScreen
 import com.example.assignment.screen.register.RegisterScreen
 import com.example.assignment.screen.register.RegisterTypeScreen
+import com.example.assignment.viewmodel.achievement.AchievementViewModel
+import com.example.assignment.viewmodel.achievement.AchievementViewModelFactory
 import com.example.assignment.viewmodel.food.AddFoodViewModel
 import com.example.assignment.viewmodel.food.AddFoodViewModelFactory
 import com.example.assignment.viewmodel.food.FoodDetailViewModel
@@ -57,6 +64,8 @@ import com.example.assignment.viewmodel.inventory.InventoryViewModel
 import com.example.assignment.viewmodel.inventory.InventoryViewModelFactory
 import com.example.assignment.viewmodel.order.OrderViewModel
 import com.example.assignment.viewmodel.order.OrderViewModelFactory
+import com.example.assignment.viewmodel.profile.ProfileViewModel
+import com.example.assignment.viewmodel.profile.ProfileViewModelFactory
 import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModel
 import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModelFactory
 import io.github.jan.supabase.auth.auth
@@ -78,6 +87,10 @@ fun AppNavigation(
     }
     val orderRepository = remember {
         OrderRepository(supabase)
+    }
+
+    val achievementRepository = remember {
+        AchievementRepository(supabase)
     }
 
     val currentUserId = supabase.auth.currentUserOrNull()?.id.orEmpty()
@@ -792,6 +805,16 @@ fun AppNavigation(
 
         composable("PROFILE_CONSUMER") {
 
+            val orderViewModel: OrderViewModel =
+                viewModel(
+                    factory = OrderViewModelFactory(
+                        orderRepository,
+                        currentUserId,
+                        foodRepository,
+                        restaurantRepository
+                    )
+                )
+
             Scaffold(
                 bottomBar = {
                     AppNavigationBar(
@@ -805,7 +828,8 @@ fun AppNavigation(
                     innerPadding = innerPadding,
                     navController = navController,
                     authRepository = authRepository,
-                    userPreferencesManager = userPreferencesManager
+                    userPreferencesManager = userPreferencesManager,
+                    orderViewModel = orderViewModel
                 )
             }
         }
@@ -817,6 +841,65 @@ fun AppNavigation(
             Scaffold(topBar = {AppTopBar("Add Item", navController)}) {
                 innerPadding ->
                 ItemDetailScreen(innerPadding, inventoryViewModel, itemId,navController)
+            }
+        }
+
+        composable("EDIT_PROFILE") {
+            val profileRepository = remember { ProfileRepository(supabase) }
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = ProfileViewModelFactory(profileRepository, currentUserId)
+            )
+            Scaffold(topBar = { AppTopBar("Edit Profile", navController) }) { innerPadding ->
+                EditProfileScreen(
+                    innerPadding = innerPadding,
+                    navController = navController,
+                    viewModel = profileViewModel
+                )
+            }
+        }
+
+        composable("RESERVATION_HISTORY") {
+            val historyViewModel: OrderViewModel = viewModel(
+                factory = OrderViewModelFactory(
+                    orderRepository,
+                    currentUserId,
+                    foodRepository,
+                    restaurantRepository
+                )
+            )
+            Scaffold(topBar = { AppTopBar("Reservation History", navController) }) { innerPadding ->
+                ReservationHistoryScreen(
+                    innerPadding = innerPadding,
+                    navController = navController,
+                    orderViewModel = historyViewModel
+                )
+            }
+        }
+
+        composable("achievement") {
+
+            val achievementViewModel:
+                    AchievementViewModel =
+                viewModel(
+                    factory =
+                        AchievementViewModelFactory(
+                            repository =
+                                achievementRepository,
+
+                            currentUserId =
+                                currentUserId
+                        )
+                )
+
+            Scaffold(topBar = {AppTopBar("Achievement",navController)}) {
+                innerPadding ->
+                AchievementScreen(
+                    innerPadding =
+                        innerPadding,
+
+                    viewModel =
+                        achievementViewModel
+                )
             }
         }
     }

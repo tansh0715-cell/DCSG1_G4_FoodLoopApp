@@ -12,75 +12,288 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.assignment.model.Achievement
-
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.assignment.viewmodel.achievement.AchievementViewModel
 
 @Composable
 fun AchievementScreen(
-    innerPadding: PaddingValues
-){
-    val achievementList = mutableListOf<Achievement>(
-        Achievement("First Food Rescue","Buy 1 surplus meal","\uD83C\uDFC5","You rescued your first surplus meal and prevented it from becoming waste.",1,1),
-        Achievement("Waste Warrior","Buy 5 surplus meal","\uD83C\uDF31","Five meals saved from the bin. Small actions, real impact.",5,5),
-        Achievement("Food Hero","Buy 10 surplus meal","❤\uFE0F","",7,10),
-        Achievement("Planet Protector","Buy 50 surplus meal","\uD83C\uDF0D","",7,50)
-    )
-    Column(modifier = Modifier.fillMaxWidth().padding(innerPadding), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = "Achievements", style = MaterialTheme.typography.headlineLarge)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(achievementList){achievement ->
-                ElevatedCard(modifier = Modifier.fillMaxWidth().height(125.dp)) {
-                    val progress = achievement.current.toFloat() / achievement.target.toFloat()
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxHeight()) {
-                        Column(Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = achievement.icon,fontSize = 40.sp)
+    innerPadding: PaddingValues,
+    viewModel: AchievementViewModel
+) {
 
-                        }
-                        Column(Modifier.weight(2f).padding(horizontal = 10.dp),
-                            horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text(text = achievement.title, style = MaterialTheme.typography.labelLarge)
-                            if (achievement.current == achievement.target){
+    val achievements by
+    viewModel.achievements
+        .collectAsStateWithLifecycle()
+
+    val isLoading by
+    viewModel.isLoading
+        .collectAsStateWithLifecycle()
+
+    val error by
+    viewModel.error
+        .collectAsStateWithLifecycle()
+
+
+    LaunchedEffect(Unit) {
+
+        viewModel.loadAchievements()
+
+    }
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding),
+
+        horizontalAlignment =
+            Alignment.CenterHorizontally
+    ) {
+
+
+
+        if (isLoading) {
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment =
+                    Alignment.CenterHorizontally,
+                verticalArrangement =
+                    Arrangement.Center
+            ) {
+
+                CircularProgressIndicator()
+
+            }
+
+        } else if (error != null) {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+
+                horizontalAlignment =
+                    Alignment.CenterHorizontally,
+
+                verticalArrangement =
+                    Arrangement.Center
+            ) {
+
+                Text(
+                    text = error ?: "Unknown error",
+                    color =
+                        MaterialTheme.colorScheme.error
+                )
+
+            }
+
+        } else {
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+
+                contentPadding =
+                    PaddingValues(16.dp),
+
+                verticalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+
+                items(
+                    achievements
+                ) { progress ->
+
+                    val achievement =
+                        progress.achievement
+
+                    val current =
+                        progress.current
+
+
+                    // Prevent progress from exceeding 100%
+                    val progressValue =
+                        (
+                                current.toFloat() /
+                                        achievement.target.toFloat()
+                                )
+                            .coerceIn(0f, 1f)
+
+
+                    ElevatedCard(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(140.dp)
+                    ) {
+
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically,
+
+                            modifier =
+                                Modifier.fillMaxHeight()
+                        ) {
+
+                            // ==========================
+                            // Achievement icon
+                            // ==========================
+
+                            Column(
+                                modifier =
+                                    Modifier.weight(1f),
+
+                                verticalArrangement =
+                                    Arrangement.Center,
+
+                                horizontalAlignment =
+                                    Alignment.CenterHorizontally
+                            ) {
+
                                 Text(
-                                    text = achievement.quote,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                )}
-                            else
-                            {
-                                Text(text = achievement.description, style = MaterialTheme.typography.bodyMedium
-                                    , color = MaterialTheme.colorScheme.onSecondary)
+                                    text =
+                                        achievement.icon,
+
+                                    fontSize =
+                                        40.sp
+                                )
                             }
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start) {
-                                LinearProgressIndicator(
-                                    progress = { progress },
-                                    modifier = Modifier.width(150.dp),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.background,
-                                    drawStopIndicator = {}
-                                )
+
+
+                            // ==========================
+                            // Achievement information
+                            // ==========================
+
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .weight(2f)
+                                        .padding(
+                                            horizontal = 10.dp
+                                        ),
+
+                                horizontalAlignment =
+                                    Alignment.Start,
+
+                                verticalArrangement =
+                                    Arrangement.spacedBy(5.dp)
+                            ) {
+
                                 Text(
-                                    text = "${achievement.current}/${achievement.target}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                    text =
+                                        achievement.title,
+
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .labelLarge
                                 )
+
+
+                                // Completed
+                                if (
+                                    current >=
+                                    achievement.target
+                                ) {
+
+                                    Text(
+                                        text =
+                                            achievement.quote,
+
+                                        style =
+                                            MaterialTheme
+                                                .typography
+                                                .bodyMedium,
+
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .secondary
+                                    )
+
+                                } else {
+
+                                    Text(
+                                        text =
+                                            achievement.description,
+
+                                        style =
+                                            MaterialTheme
+                                                .typography
+                                                .bodyMedium,
+
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSecondary
+                                    )
+                                }
+
+
+                                // ==========================
+                                // Progress bar
+                                // ==========================
+
+                                Row(
+                                    modifier =
+                                        Modifier.fillMaxWidth(),
+
+                                    verticalAlignment =
+                                        Alignment.CenterVertically
+                                ) {
+
+                                    LinearProgressIndicator(
+
+                                        progress = {
+                                            progressValue
+                                        },
+
+                                        modifier =
+                                            Modifier.width(
+                                                150.dp
+                                            ),
+
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .primary,
+
+                                        trackColor =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .background,
+
+                                        drawStopIndicator = {}
+                                    )
+
+
+                                    Text(
+                                        text =
+                                            "${current}/${achievement.target}",
+
+                                        style =
+                                            MaterialTheme
+                                                .typography
+                                                .bodySmall,
+
+                                        modifier =
+                                            Modifier.padding(
+                                                horizontal = 12.dp
+                                            )
+                                    )
+                                }
                             }
                         }
                     }

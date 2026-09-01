@@ -35,9 +35,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import coil3.compose.AsyncImage
 
 @Composable
 fun ItemDetailScreen(
@@ -82,6 +86,28 @@ fun ItemDetailScreen(
             .padding(innerPadding)
             .padding(24.dp)
     ) {
+
+        if (!food.image_url.isNullOrBlank()) {
+            AsyncImage(
+                model = food.image_url,
+                contentDescription = "${food.name} image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No image")
+            }
+        }
         // Food Name
         Text(
             text = food.name,
