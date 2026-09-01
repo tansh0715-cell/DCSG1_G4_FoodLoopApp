@@ -49,129 +49,194 @@ fun TNGPaymentCard(
 
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        isSending = true
-        delay(1500)
-        isSending = false
-        otpSent = true
-        countdown = 60
-        canResend = false
-        onSendOtp()
-    }
-
-    LaunchedEffect(countdown) {
-        if (countdown > 0 && !canResend) {
+    LaunchedEffect(otpSent, countdown) {
+        if (otpSent && countdown > 0) {
             delay(1000)
             countdown--
-        } else if (countdown == 0) {
-            canResend = true
+
+            if (countdown == 0) {
+                canResend = true
+            }
         }
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F7FF)),
-        border = BorderStroke(2.dp, Color(0xFF0056B3))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF0F7FF)
+        ),
+        border = BorderStroke(
+            2.dp,
+            Color(0xFF0056B3)
+        )
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .background(Color(0xFF0056B3), RoundedCornerShape(16.dp)),
+                    .background(
+                        Color(0xFF0056B3),
+                        RoundedCornerShape(16.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("TNG", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text = "TNG",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text("Touch 'n Go eWallet", fontWeight = FontWeight.Bold, color = Color(0xFF0B1A33))
-
-            when {
-                isSending -> {
-                    Text(
-                        text = "Sending OTP to your phone...",
-                        fontSize = 13.sp,
-                        color = Color(0xFF0056B3),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                otpSent -> {
-                    Text(
-                        text = "✅ OTP sent to 012-****789",
-                        fontSize = 13.sp,
-                        color = Color(0xFF2E7D32),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
+            Text(
+                text = "Touch 'n Go eWallet",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF0B1A33)
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = otp,
-                onValueChange = { onOtpChange(it.filter { it.isDigit() }.take(6)) },
-                label = { Text("OTP Code") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                enabled = otpSent && !isSending,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF0056B3),
-                    unfocusedBorderColor = Color(0xFFDCE4EE),
-                    disabledBorderColor = Color(0xFFDCE4EE)
-                )
-            )
+            if (!otpSent && !isSending) {
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = if (canResend) "Didn't receive the code?" else "Resend available in ${countdown}s",
-                    fontSize = 12.sp,
-                    color = if (canResend) Color(0xFF0056B3) else Color(0xFF8A9BB5)
+                    text = "Verify your payment with OTP",
+                    fontSize = 13.sp,
+                    color = Color(0xFF8A9BB5)
                 )
 
-                if (canResend) {
-                    Text(
-                        text = "Resend OTP",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0056B3),
-                        modifier = Modifier.clickable {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Send OTP",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(
+                            Color(0xFF0056B3),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable {
+
                             coroutineScope.launch {
                                 isSending = true
-                                otpSent = false
+
                                 onSendOtp()
-                                countdown = 60
-                                canResend = false
-                                onOtpChange("")
+
                                 delay(1500)
+
                                 isSending = false
                                 otpSent = true
+                                countdown = 60
+                                canResend = false
                             }
                         }
+                        .padding(
+                            horizontal = 24.dp,
+                            vertical = 10.dp
+                        )
+                )
+            }
+
+            if (isSending) {
+                Text(
+                    text = "Sending OTP...",
+                    fontSize = 13.sp,
+                    color = Color(0xFF0056B3)
+                )
+            }
+
+            if (otpSent) {
+
+                Text(
+                    text = "✓ OTP sent successfully",
+                    fontSize = 13.sp,
+                    color = Color(0xFF2E7D32)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = otp,
+                    onValueChange = {
+                        onOtpChange(
+                            it.filter { char ->
+                                char.isDigit()
+                            }.take(6)
+                        )
+                    },
+                    label = {
+                        Text("OTP Code")
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF0056B3),
+                        unfocusedBorderColor = Color(0xFFDCE4EE)
                     )
-                } else {
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
                     Text(
-                        text = "",
-                        fontSize = 14.sp,
-                        modifier = Modifier.height(20.dp))
+                        text = if (canResend) {
+                            "Didn't receive the code?"
+                        } else {
+                            "Resend available in ${countdown}s"
+                        },
+                        fontSize = 12.sp,
+                        color = Color(0xFF8A9BB5)
+                    )
+
+                    if (canResend) {
+                        Text(
+                            text = "Resend OTP",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0056B3),
+                            modifier = Modifier.clickable {
+
+                                coroutineScope.launch {
+                                    isSending = true
+                                    otpSent = false
+
+                                    onOtpChange("")
+                                    onSendOtp()
+
+                                    delay(1500)
+
+                                    isSending = false
+                                    otpSent = true
+                                    countdown = 60
+                                    canResend = false
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = "💡 For demo, use OTP: 123456",
+                text = "Demo OTP: 123456",
                 fontSize = 11.sp,
                 color = Color(0xFF8A9BB5)
             )

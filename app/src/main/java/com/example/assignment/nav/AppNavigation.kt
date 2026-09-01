@@ -47,6 +47,7 @@ import com.example.assignment.screen.login.ForgotPasswordScreen
 import com.example.assignment.screen.login.LoginScreen
 import com.example.assignment.screen.login.ResetPasswordScreen
 import com.example.assignment.screen.payment.PaymentScreen
+import com.example.assignment.screen.payment.PaymentSuccessScreen
 import com.example.assignment.screen.profileModule.AchievementScreen
 import com.example.assignment.screen.profileModule.EditProfileScreen
 import com.example.assignment.screen.profileModule.ProfileScreen
@@ -496,23 +497,21 @@ fun AppNavigation(
                     total = total,
                     onPaymentSuccess = {
 
-                        // Payment succeeded -> create the real order.
+                        navController.navigate("PAYMENT_SUCCESS") {
+                            popUpTo("PAYMENT/$foodId/$quantity") {
+                                inclusive = true
+                            }
+                        }
+
                         orderViewModel.createOrder(
                             foodId = food.id,
                             quantity = quantity,
                             paymentSuccess = true,
 
-                            onSuccess = { createdOrder ->
-                                navController.navigate(
-                                    "ORDER"
-                                ) {
-                                    popUpTo(
-                                        "PAYMENT/$foodId/$quantity"
-                                    ) {
-                                        inclusive = true
-                                    }
-                                }
+                            onSuccess = {
+                                println("Order created successfully")
                             },
+
                             onError = { error ->
                                 error.printStackTrace()
                             }
@@ -540,6 +539,19 @@ fun AppNavigation(
                     )
                 }
             }
+        }
+
+        composable("PAYMENT_SUCCESS") {
+            PaymentSuccessScreen(
+                onViewOrder = {
+                    navController.navigate("ORDER") {
+                        popUpTo("PAYMENT_SUCCESS") {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
 
         composable("PROVIDER_HOME") {

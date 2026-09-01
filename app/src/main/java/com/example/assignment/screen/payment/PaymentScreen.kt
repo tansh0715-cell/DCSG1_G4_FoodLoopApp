@@ -341,7 +341,6 @@ fun PaymentScreen(
                             onPaymentSuccess()
                         }
                     }
-                    onPaymentSuccess()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
