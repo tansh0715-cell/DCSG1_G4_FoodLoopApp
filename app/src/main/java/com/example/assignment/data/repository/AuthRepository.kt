@@ -174,7 +174,7 @@ class AuthRepository {
         val cleanEmail = email.trim().lowercase()
         supabase.auth.resetPasswordForEmail(
             email = cleanEmail,
-            redirectUrl = "com.example.assignment://login-callback"
+            redirectUrl = "com.example.assignment://reset-callback"
         )
     }
 

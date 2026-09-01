@@ -45,17 +45,29 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
         providerLongitude = longitude
     }
 
+    fun isPhoneValid(phone: String): Boolean {
+        return Regex("^01[0-9]{8,9}$").matches(phone)
+    }
+
     fun register(accountType: String, onRegisterSuccess: () -> Unit) {
         if (password != confirmPassword) {
             message = "Passwords do not match"
             return
         }
 
+        if (phone.isBlank()) {
+            message = "Please enter your phone number"
+        }
+
+        if (!isPhoneValid(phone)) {
+            message = "Invalid phone number"
+            return
+        }
+
         when (accountType) {
             "FOOD_SAVER" -> {
                 if (name.isBlank() || email.isBlank() ||
-                    phone.isBlank() || password.isBlank() ||
-                    confirmPassword.isBlank()
+                    password.isBlank() || confirmPassword.isBlank()
                 ) {
                     message = "Please fill in all fields"
                     return
@@ -69,8 +81,7 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
 
             "FOOD_PROVIDER" -> {
                 if (restaurantName.isBlank() || email.isBlank() ||
-                    phone.isBlank() || address.isBlank() ||
-                    password.isBlank() || confirmPassword.isBlank()
+                    address.isBlank() || password.isBlank() || confirmPassword.isBlank()
                 ) {
                     message = "Please fill in all fields"
                     return

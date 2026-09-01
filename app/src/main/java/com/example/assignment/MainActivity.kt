@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
@@ -20,6 +19,8 @@ import io.github.jan.supabase.auth.handleDeeplinks
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 class MainActivity : ComponentActivity() {
@@ -82,14 +83,33 @@ class MainActivity : ComponentActivity() {
         handleAuthDeepLink(intent, navController)
     }
 
-    private fun handleAuthDeepLink(intent: Intent?, navController: NavHostController?) {
+    private fun handleAuthDeepLink(
+        intent: Intent?,
+        navController: NavHostController?
+    ) {
         val uri = intent?.data ?: return
         Log.d("DeepLink", "URI = $uri")
-        Log.d("DeepLink", "Fragment = ${uri.fragment}")
+        Log.d("DeepLink", "Host = ${uri.host}")
+        Log.d("DeepLink", "Path = ${uri.path}")
+
         supabase.handleDeeplinks(intent)
-        val fragment = uri.fragment.orEmpty()
-        if (fragment.contains("type=recovery")) {
-            navController?.navigate("RESET_PASSWORD")
+
+        when (uri.host) {
+            "reset-callback" -> {
+                Log.d("DeepLink", "🔄 Navigating to RESET_PASSWORD")
+                Handler(Looper.getMainLooper()).postDelayed({
+                    navController?.navigate("RESET_PASSWORD") {
+                        popUpTo("LOGIN") { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }, 500)
+            }
+            "login-callback" -> {
+                Log.d("DeepLink", "Legacy login-callback")
+            }
+            else -> {
+                Log.d("DeepLink", "Unknown host: ${uri.host}")
+            }
         }
     }
 }

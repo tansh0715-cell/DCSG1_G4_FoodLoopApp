@@ -1,23 +1,46 @@
 package com.example.assignment.screen.payment
 
-import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.assignment.model.Order
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -30,14 +53,24 @@ fun PaymentScreen(
     onPaymentSuccess: () -> Unit,
     onBack: () -> Unit
 ) {
-    val items = listOf(
-        Triple(
-            foodName, total / quantity, quantity
-        )
-    )
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // 状态变量
     var isProcessing by remember { mutableStateOf(false) }
     var selectedPaymentMethod by remember { mutableStateOf("credit_card") }
-    val coroutineScope = rememberCoroutineScope()
+
+    // 电话号码
+    var phoneNumber by remember { mutableStateOf("") }
+
+    // TNG OTP
+    var tngOtp by remember { mutableStateOf("") }
+    var otpError by remember { mutableStateOf<String?>(null) }
+
+    // 订单明细（目前只有一项）
+    val items = listOf(
+        Triple(foodName, total / quantity, quantity)
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize()
@@ -146,19 +179,22 @@ fun PaymentScreen(
             }
 
             OutlinedTextField(
-                value = "012-3456789",
-                onValueChange = {},
+                value = phoneNumber,
+                onValueChange = { newValue ->
+                    phoneNumber = newValue.filter { it.isDigit() }.take(11)
+                },
                 label = { Text("Bind Account / Phone *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 textStyle = TextStyle(color = Color.Black),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF2E7D32),
-                    unfocusedBorderColor = Color(0xFFDCE4EE),
-                    disabledBorderColor = Color(0xFFDCE4EE)
-                ),
-                readOnly = true
+                    unfocusedBorderColor = Color(0xFFDCE4EE)
+                )
             )
+
             Text(
                 text = "Used for payment verification & order tracking",
                 fontSize = 12.sp,
@@ -191,14 +227,20 @@ fun PaymentScreen(
                         isSelected = selectedPaymentMethod == "credit_card",
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { selectedPaymentMethod = "credit_card" }
+                            .clickable {
+                                selectedPaymentMethod = "credit_card"
+                                otpError = null
+                            }
                     )
                     PaymentMethodChip(
                         text = "Touch 'n Go",
                         isSelected = selectedPaymentMethod == "tng",
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { selectedPaymentMethod = "tng" }
+                            .clickable {
+                                selectedPaymentMethod = "tng"
+                                otpError = null
+                            }
                     )
                 }
             }
@@ -208,7 +250,25 @@ fun PaymentScreen(
                     CreditCardForm()
                 }
                 "tng" -> {
-                    TNGPaymentCard()
+                    TNGPaymentCard(
+                        otp = tngOtp,
+                        onOtpChange = {
+                            tngOtp = it
+                            otpError = null
+                        },
+                        onSendOtp = {
+                            println("📱 Sending OTP to phone...")
+                        }
+                    )
+
+                    otpError?.let {
+                        Text(
+                            text = it,
+                            color = Color(0xFFD32F2F),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                        )
+                    }
                 }
             }
 
@@ -243,6 +303,37 @@ fun PaymentScreen(
             Button(
                 onClick = {
                     if (!isProcessing) {
+                        if (selectedPaymentMethod == "tng") {
+                            if (phoneNumber.length < 10) {
+                                Toast.makeText(
+                                    context,
+                                    "Please enter a valid phone number",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Button
+                            }
+                            if (tngOtp.length != 6) {
+                                otpError = "Please enter 6-digit OTP"
+                                return@Button
+                            }
+                            if (tngOtp != "123456") {
+                                otpError = "Invalid OTP. Please try again. (Use 123456)"
+                                return@Button
+                            }
+                            otpError = null
+                        }
+
+                        if (selectedPaymentMethod == "credit_card") {
+                            if (phoneNumber.length < 10) {
+                                Toast.makeText(
+                                    context,
+                                    "Please enter a valid phone number",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Button
+                            }
+                        }
+
                         coroutineScope.launch {
                             isProcessing = true
                             delay(2000)
@@ -250,6 +341,7 @@ fun PaymentScreen(
                             onPaymentSuccess()
                         }
                     }
+                    onPaymentSuccess()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -278,8 +370,3 @@ fun PaymentScreen(
         }
     }
 }
-
-
-
-
-

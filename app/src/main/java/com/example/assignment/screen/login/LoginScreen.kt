@@ -3,6 +3,7 @@ package com.example.assignment.screen.login
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,9 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -73,6 +76,7 @@ fun LoginScreen(
 
     var isCheckingSession by remember { mutableStateOf(true) }
 
+    // 检查是否已登录
     LaunchedEffect(Unit) {
         val currentUser = supabase.auth.currentUserOrNull()
         if (currentUser != null) {
@@ -109,17 +113,21 @@ fun LoginScreen(
         isCheckingSession = false
     }
 
+    // ✅ 检查会话时显示加载圈（而不是 "Checking session..."）
     if (isCheckingSession) {
-        Column(
+        Box(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            contentAlignment = Alignment.Center
         ) {
-            Text("Checking session...", style = MaterialTheme.typography.bodyLarge)
+            CircularProgressIndicator(
+                color = Color(0xFF2E7D32),
+                modifier = Modifier.size(48.dp)
+            )
         }
         return
     }
 
+    // ===== 登录表单 =====
     Column(
         modifier = Modifier
             .fillMaxSize()
