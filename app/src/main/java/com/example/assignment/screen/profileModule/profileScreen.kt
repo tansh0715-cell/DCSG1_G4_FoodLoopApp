@@ -22,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -460,60 +462,37 @@ fun ProfileScreen(
                 // ==============================
                 // Logout
                 // ==============================
-
                 ListItem(
                     headlineContent = {
-
-                        Text(
-                            text = "Logout",
-                            color =
-                                MaterialTheme.colorScheme.error
-                        )
+                        Text(text = "Logout", color = MaterialTheme.colorScheme.error)
                     },
-
                     leadingContent = {
-
                         Icon(
-                            painter = painterResource(
-                                R.drawable.ic_launcher_foreground
-                            ),
-                            contentDescription =
-                                "Logout",
-                            tint =
-                                MaterialTheme.colorScheme.error
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     },
-
-                    colors = ListItemDefaults.colors(
-                        containerColor =
-                            MaterialTheme.colorScheme.background
-                    ),
-
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                     modifier = Modifier.clickable {
-
                         scope.launch {
-
                             try {
-
-                                userPreferencesManager.clear()
-
                                 authRepository.logout()
-
+                                userPreferencesManager.clear()
                                 navController.navigate("LOGIN") {
-
-                                    popUpTo(0) {
-                                        inclusive = true
-                                    }
+                                    popUpTo(0) { inclusive = true }
                                 }
-
                             } catch (e: Exception) {
-
                                 e.printStackTrace()
-
+                                userPreferencesManager.clear()
+                                navController.navigate("LOGIN") {
+                                    popUpTo(0) { inclusive = true }
+                                }
                             }
                         }
                     }
                 )
+
             }
         }
     }
