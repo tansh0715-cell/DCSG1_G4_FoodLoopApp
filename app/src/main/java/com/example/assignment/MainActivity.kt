@@ -23,6 +23,8 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.assignment.notification.NotificationWorkerScheduler
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var authRepository: AuthRepository
@@ -49,7 +51,8 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        // 初始化依赖
+        NotificationWorkerScheduler.start(this)
+
         authRepository = AuthRepository()
         userPreferencesManager = UserPreferencesManager(this)
 

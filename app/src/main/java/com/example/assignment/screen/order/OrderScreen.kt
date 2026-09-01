@@ -237,8 +237,9 @@ fun ProviderOrderScreen(
                         orderViewModel.loadProviderOrders()
                     },
 
-                    onError = {
-                        pickupError = "Invalid pickup code."
+                    onError = { error ->
+                        pickupError =
+                            error.message ?: "Unable to complete order."
                     }
                 )
             }

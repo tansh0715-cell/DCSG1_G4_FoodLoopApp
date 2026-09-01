@@ -117,7 +117,7 @@ class FoodReminderReceiver : BroadcastReceiver() {
                 context,
                 channelId
             )
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(
                     "Food Expiration Reminder"
                 )

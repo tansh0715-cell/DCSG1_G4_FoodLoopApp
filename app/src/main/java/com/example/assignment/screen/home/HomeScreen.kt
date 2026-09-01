@@ -61,6 +61,7 @@ import com.example.assignment.components.NotificationPopup
 import com.example.assignment.components.ProviderFoodCard
 import com.example.assignment.components.StatCard
 import com.example.assignment.location.LocationTracker
+import com.example.assignment.notification.NotificationWorkerScheduler
 import com.example.assignment.ui.theme.BackgroundColor
 import com.example.assignment.ui.theme.PrimaryGreen
 import com.example.assignment.ui.theme.SafeColor
@@ -76,31 +77,6 @@ fun HomeScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    var showNotificationPopup by remember {
-        mutableStateOf(false)
-    }
-    LaunchedEffect(showNotificationPopup) {
-
-        if (showNotificationPopup) {
-
-            delay(3000)
-
-            showNotificationPopup = false
-        }
-    }
-    LaunchedEffect(uiState.hasNotifications) {
-
-        if (
-            uiState.hasNotifications &&
-            !uiState.notificationPopupShown
-        ) {
-
-            showNotificationPopup = true
-
-            viewModel.markConsumerNotificationPopupShown()
-        }
-    }
     val context = LocalContext.current
 
     val locationTracker = remember {
@@ -172,8 +148,15 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
+
         viewModel.loadAllFoods()
+
         viewModel.loadConsumerNotificationState()
+
+        // Immediately check system notifications
+        NotificationWorkerScheduler.runNow(
+            context
+        )
     }
 
     Box(
@@ -300,7 +283,7 @@ fun HomeScreen(
                                         .clickable {
 
                                             navController.navigate(
-                                                "restaurant${restaurant.id}?distanceMeters=${restaurant.distanceMeters}"
+                                                "restaurant/${restaurant.id}?distanceMeters=${restaurant.distanceMeters}"
                                             )
                                         }
                                         .shadow(
@@ -494,15 +477,6 @@ fun HomeScreen(
             }
         }
 
-        NotificationPopup(
-            title = "Order Update",
-            message = "You have a new order update.",
-            visible = showNotificationPopup,
-            onDismiss = {
-                showNotificationPopup = false
-            }
-        )
-
     }
 }
 
@@ -516,33 +490,24 @@ fun ProviderHomeScreen(
 ) {
     val uiState by
     viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    var showNotificationPopup by remember {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(
-        uiState.hasProviderNotifications
-    ) {
-
-        if (
-            uiState.hasProviderNotifications &&
-            !uiState.providerNotificationPopupShown
-        ) {
-
-            showNotificationPopup = true
-
-            viewModel.markProviderNotificationPopupShown()
-        }
-    }
 
     LaunchedEffect(providerId) {
 
         if (providerId.isNotBlank()) {
+
+            // Immediately check notifications
+            NotificationWorkerScheduler.runNow(
+                context
+            )
+
             while (true) {
+
                 viewModel.loadProviderHome(
                     providerId
                 )
+
                 delay(30_000)
             }
         }
@@ -930,13 +895,5 @@ fun ProviderHomeScreen(
                 }
             }
         }
-        NotificationPopup(
-            title = "New Reservation",
-            message = "You have a new reservation.",
-            visible = showNotificationPopup,
-            onDismiss = {
-                showNotificationPopup = false
-            }
-        )
     }
 }
