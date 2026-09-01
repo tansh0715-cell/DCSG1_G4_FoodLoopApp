@@ -21,6 +21,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -167,9 +168,9 @@ fun ProfileScreen(
             ) {
 
                 Column(
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize()
                 ) {
 
                     Image(
@@ -196,6 +197,7 @@ fun ProfileScreen(
                             )
                         }
                     } else {
+                        // Centered name only - gray email/phone removed per request
                         Text(
                             text = when {
                                 profileViewModel.role == "FOOD_PROVIDER" && profileViewModel.restaurantName.isNotBlank() -> profileViewModel.restaurantName
@@ -206,47 +208,14 @@ fun ProfileScreen(
                             style =
                                 MaterialTheme.typography.titleLarge,
                             modifier =
-                                Modifier.padding(5.dp)
+                                Modifier.padding(top = 8.dp)
                         )
-
-                        Text(
-                            text = if (profileViewModel.email.isNotBlank()) profileViewModel.email else if (profileViewModel.isLoading) "Loading..." else "@user",
-                            style =
-                                MaterialTheme.typography.titleMedium,
-                            color =
-                                MaterialTheme.colorScheme.onSecondary
-                        )
-
-                        if (profileViewModel.phone.isNotBlank()) {
-                            Text(
-                                text = profileViewModel.phone,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondary
-                            )
-                        }
-
-                        if (profileViewModel.role == "FOOD_PROVIDER" && profileViewModel.address.isNotBlank()) {
-                            Text(
-                                text = profileViewModel.address,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
-                            )
-                        }
-
-                        if (profileViewModel.errorMessage != null && !profileViewModel.isProfileLoaded) {
-                            Text(
-                                text = profileViewModel.errorMessage ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
                     }
                 }
             }
         }
 
+        Spacer(modifier = Modifier.height(20.dp))
 
         // ==============================
         // Statistics - only for Food Saver (needs orderViewModel)

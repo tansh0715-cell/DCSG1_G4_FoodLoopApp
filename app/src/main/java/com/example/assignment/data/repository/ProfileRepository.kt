@@ -39,14 +39,16 @@ class ProfileRepository(
         name: String,
         phone: String
     ) {
-        val existing = getFoodSaver(userId)
-            ?: throw Exception("Food saver profile not found")
 
-        val updated = existing.copy(
-            name = name.trim(),
-            phone = phone.trim()
-        )
-        supabase.from("food_savers").upsert(updated)
+        supabase.from("food_savers")
+            .update(
+                {
+                    set("name", name.trim())
+                    set("phone", phone.trim())
+                }
+            ) {
+                filter { eq("user_id", userId) }
+            }
     }
 
     suspend fun updateFoodProvider(
@@ -55,24 +57,29 @@ class ProfileRepository(
         phone: String,
         address: String
     ) {
-        val existing = getFoodProvider(userId)
-            ?: throw Exception("Food provider profile not found")
 
-        val updatedProvider = existing.copy(
-            restaurantName = restaurantName.trim(),
-            phone = phone.trim(),
-            address = address.trim()
-        )
-        supabase.from("food_providers").upsert(updatedProvider)
+        supabase.from("food_providers")
+            .update(
+                {
+                    set("restaurantName", restaurantName.trim())
+                    set("phone", phone.trim())
+                    set("address", address.trim())
+                }
+            ) {
+                filter { eq("user_id", userId) }
+            }
 
-        // Keep restaurants table in sync (name + address)
-        val restaurant = getRestaurantByProvider(userId)
-        if (restaurant != null) {
-            val updatedRestaurant = restaurant.copy(
-                name = restaurantName.trim(),
-                address = address.trim()
-            )
-            supabase.from("restaurants").upsert(updatedRestaurant)
-        }
+
+
+            supabase.from("restaurants")
+                .update(
+                    {
+                        set("name", restaurantName.trim())
+                        set("address", address.trim())
+                    }
+                ) {
+                    filter { eq("provider_id", userId) }
+                }
+
     }
 }

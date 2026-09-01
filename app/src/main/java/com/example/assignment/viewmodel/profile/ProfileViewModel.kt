@@ -176,7 +176,8 @@ class ProfileViewModel(
                 successMessage = "Profile updated successfully"
                 onSuccess()
             } catch (e: Exception) {
-                errorMessage = e.message ?: "Failed to update profile"
+                errorMessage = e.message?: "Failed to update profile"
+                println(errorMessage)
             } finally {
                 isSaving = false
             }

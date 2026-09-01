@@ -88,20 +88,6 @@ fun EditProfileScreen(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = if (viewModel.role == "FOOD_PROVIDER") "Edit Provider Profile" else "Edit Profile",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-
-                    // Email - read only
-                    OutlinedTextField(
-                        value = viewModel.email,
-                        onValueChange = {},
-                        label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = false,
-                        supportingText = { Text("Email cannot be changed") }
-                    )
 
                     if (viewModel.role == "FOOD_SAVER") {
                         OutlinedTextField(
