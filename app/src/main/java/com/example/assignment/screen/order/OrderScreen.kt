@@ -151,7 +151,12 @@ fun ProviderOrderScreen(
     }
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadProviderOrders()
+        while (true) {
+            orderViewModel.loadConsumerOrders()
+
+            // Re-check every 30 seconds
+            kotlinx.coroutines.delay(30_000)
+        }
     }
 
     Column(
