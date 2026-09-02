@@ -30,8 +30,10 @@ import com.example.assignment.viewmodel.inventory.InventoryViewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
@@ -52,19 +54,39 @@ fun ItemDetailScreen(
     navController: NavController) {
 
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    val food = vm.foods.find { it.item_id == itemId }
     val context = LocalContext.current
-
     LaunchedEffect(Unit) {
         vm.loadInventory(context)
     }
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val food = vm.foods.find { it.item_id == itemId }
+
+
+
+
     if (food == null) {
-        Text(
-            text = "Food item not found",
-            modifier = Modifier.padding(innerPadding)
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator()
+                    Text(
+                        text = "Loading items...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
+            }
+        }
         return
     }
 
@@ -76,10 +98,7 @@ fun ItemDetailScreen(
         mutableStateOf(false)
     }
 
-    if (food == null) {
-        Text("Food not found")
-        return
-    }
+
 
     Column(
         modifier = Modifier
@@ -87,6 +106,7 @@ fun ItemDetailScreen(
             .padding(innerPadding)
             .padding(24.dp)
     ) {
+
 
         if (!food.image_url.isNullOrBlank()) {
             AsyncImage(
@@ -223,18 +243,25 @@ fun ItemDetailScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        ElevatedButton(onClick = {
-            showDeleteDialog = true
-        },
+        ElevatedButton(
+            onClick = {
+                showDeleteDialog = true
+            },
             shape = RoundedCornerShape(size = 20.dp),
             colors = ButtonDefaults.elevatedButtonColors(
                 containerColor = MaterialTheme.colorScheme.error,
                 contentColor = MaterialTheme.colorScheme.onError
             )
-        ){
-            Icon(painter = painterResource(R.drawable.delete_24dp_e3e3e3_fill0_wght400_grad0_opsz24_1_), contentDescription = "delete")
-            Text(text = "Delete Item", style = MaterialTheme.typography.labelLarge) }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.delete_24dp_e3e3e3_fill0_wght400_grad0_opsz24_1_),
+                contentDescription = "add"
+            )
+            Text(text = "Delete Item", style = MaterialTheme.typography.labelLarge)
         }
+    }
+
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = {
