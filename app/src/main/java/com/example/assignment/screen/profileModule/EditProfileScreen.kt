@@ -110,7 +110,6 @@ fun EditProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = false,
                     )
-
                     if (viewModel.role == "FOOD_SAVER") {
                         OutlinedTextField(
                             value = viewModel.name,
