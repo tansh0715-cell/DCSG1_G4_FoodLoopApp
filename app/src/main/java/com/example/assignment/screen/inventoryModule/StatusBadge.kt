@@ -23,5 +23,5 @@ fun StatusBadge(status: String){ //for inventory
         "EXPIRED" -> Triple("Expired", textErrorColor, ErrorColor)
         else -> Triple("Unknown", textErrorColor, ErrorColor)
     }
-    Surface(shape = RoundedCornerShape(50.dp), color = bgColor, modifier = Modifier.padding(15.dp)) {Text(text, modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp), color = textColor, style = MaterialTheme.typography.labelMedium) }
+    Surface(shape = RoundedCornerShape(50.dp), color = bgColor, modifier = Modifier.padding(15.dp)) {Text(text, modifier = Modifier.padding(vertical = 6.dp, horizontal = 12.dp), color = textColor, style = MaterialTheme.typography.titleSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) }
 }

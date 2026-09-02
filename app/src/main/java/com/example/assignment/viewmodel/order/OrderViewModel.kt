@@ -8,6 +8,7 @@ import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.model.FoodListing
 import com.example.assignment.model.Order
 import com.example.assignment.model.Restaurant
+import com.example.assignment.model.isPickupTimeEnded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,11 +24,9 @@ class OrderViewModel(
 ) : ViewModel() {
 
     private val _orders = MutableStateFlow<List<Order>>(emptyList())
-
     val orders: StateFlow<List<Order>> = _orders.asStateFlow()
 
     private val _allNotificationOrders = MutableStateFlow<List<Order>>(emptyList())
-
     val allNotificationOrders: StateFlow<List<Order>> = _allNotificationOrders.asStateFlow()
 
     private val _providerNotificationOrders = MutableStateFlow<List<Order>>(emptyList())
@@ -78,13 +77,21 @@ class OrderViewModel(
             _isLoading.value = true
 
             try {
-                val loadedOrders =
-                    repository.getConsumerOrders(
-                        currentUserId
-                    )
-                _orders.value = loadedOrders
+                val loadedOrders = repository.getConsumerOrders(
+                    currentUserId
+                )
+
+                val activeOrders = loadedOrders.filter { order ->
+
+                    order.status.equals(
+                        "PENDING", ignoreCase = true
+                    ) && !order.isPickupTimeEnded()
+                }
+
+                _orders.value = activeOrders
+
                 loadConsumerRelatedData(
-                    loadedOrders
+                    activeOrders
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -181,27 +188,6 @@ class OrderViewModel(
             }
         }
     }
-    fun loadConsumerNotificationOrders() {
-        viewModelScope.launch {
-            try {
-                val notificationOrders =
-                    repository.getAllConsumerOrders(
-                        currentUserId
-                    )
-                _allNotificationOrders.value =
-                    notificationOrders
-
-                loadConsumerRelatedData(
-                    notificationOrders
-                )
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _allNotificationOrders.value =
-                    emptyList()
-            }
-        }
-    }
 
     fun createOrder(
         foodId: String,
@@ -229,22 +215,30 @@ class OrderViewModel(
         }
     }
 
+    //ADD
     fun loadProviderOrders() {
         viewModelScope.launch {
             _isLoading.value = true
 
             try {
-
                 val loadedOrders =
                     repository.getProviderOrders(
                         currentUserId
                     )
 
-                _orders.value = loadedOrders
+                val activeOrders = loadedOrders.filter { order ->
 
-                // Load food information for each order
+                    order.status.equals(
+                        "PENDING", ignoreCase = true
+                    ) && !order.isPickupTimeEnded()
+                }
+
+                _orders.value = activeOrders
+
+                // Load food and restaurant information
+                // only for active orders.
                 loadConsumerRelatedData(
-                    loadedOrders
+                    activeOrders
                 )
 
             } catch (e: Exception) {
@@ -255,26 +249,6 @@ class OrderViewModel(
             } finally {
 
                 _isLoading.value = false
-            }
-        }
-    }
-    fun loadProviderNotificationOrders() {
-        viewModelScope.launch {
-            try {
-                _providerNotificationOrders.value =
-                    repository.getProviderOrders(
-                        currentUserId
-                    )
-                _providerNotificationFoods.value =
-                    foodRepository
-                        .getFoodListingByProvider(
-                            currentUserId
-                        )
-            } catch (e: Exception) {
-                e.printStackTrace()
-
-                _providerNotificationOrders.value =
-                    emptyList()
             }
         }
     }
@@ -289,16 +263,54 @@ class OrderViewModel(
 
             try {
 
-                repository.markOrderDone(
-                    orderId = orderId,
-                    providerId = currentUserId,
-                    pickupCode = pickupCode
-                )
+                // Get the latest order from database
+                val order = repository.getOrderById(orderId)
+                    ?: throw IllegalArgumentException("Order not found.")
+
+                val enteredCode =
+                    pickupCode.trim().uppercase()
+
+                val expectedCode =
+                    order.pickupCode.trim().uppercase()
+
+                // Validate BEFORE calling RPC
+                if (enteredCode != expectedCode) {
+                    throw IllegalArgumentException(
+                        "Invalid pickup code."
+                    )
+                }
+
+                // Correct code -> call RPC
+                val updatedOrder =
+                    repository.markOrderDone(
+                        orderId = orderId,
+                        providerId = currentUserId,
+                        pickupCode = enteredCode
+                    )
+
+                // Make sure database really changed to COMPLETED
+                if (
+                    updatedOrder == null ||
+                    !updatedOrder.status.equals(
+                        "COMPLETED",
+                        ignoreCase = true
+                    )
+                ) {
+                    throw IllegalStateException(
+                        "Order could not be completed."
+                    )
+                }
+
+                // Reload provider orders
                 loadProviderOrders()
+
                 onSuccess()
 
             } catch (e: Exception) {
-                withContext(Dispatchers.Main.immediate) {
+
+                withContext(
+                    Dispatchers.Main.immediate
+                ) {
                     onError(e)
                 }
             }

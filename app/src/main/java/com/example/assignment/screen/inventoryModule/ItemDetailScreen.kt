@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.viewmodel.inventory.InventoryViewModel
@@ -108,6 +109,7 @@ fun ItemDetailScreen(
                 Text("No image")
             }
         }
+        Spacer(Modifier.height(16.dp))
         // Food Name
         Text(
             text = food.name,
@@ -271,5 +273,6 @@ fun ItemDetailScreen(
             }
         )
     }
-}
 
+    // Full-screen image viewer same as Profile avatar
+}

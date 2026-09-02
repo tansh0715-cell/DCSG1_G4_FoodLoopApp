@@ -32,7 +32,6 @@ data class  HomeUiState(
 
     val hasProviderNotifications: Boolean = false,
     val providerNotificationsViewed: Boolean = false,
-    val providerNotificationPopupShown: Boolean = false,
 
     val selectedCategoryIndex: Int = 0,
     val categories: List<String> = listOf("All", "Meals", "Bakery", "Snacks"),
@@ -53,9 +52,6 @@ data class  HomeUiState(
     val totalFoodCount: Int = 0,
     val activeFoodCount: Int = 0,
     val errorMessage: String? = null,
-
-    //notification popup (inside app)
-    val notificationPopupShown: Boolean = false
 )
 class HomeViewModel(
     private val foodRepository: FoodRepository,
@@ -88,7 +84,7 @@ class HomeViewModel(
                 allFoods = foodRepository
                     .getFoodListingByProvider(providerId)
 
-                // Calculate Provider Dashboard statictics
+                // Calculate Provider Dashboard statics
                 val totalFoodCount = allFoods.size
                 val activeFoodCount = allFoods.count{ food ->
                     food.quantity > 0
@@ -203,9 +199,6 @@ class HomeViewModel(
             }
         }
     }
-    fun loadProviderFoods(providerId: String) {
-        loadFoods(providerId)
-    }
 
     fun markProviderNotificationsViewed() {
         _uiState.update {
@@ -214,26 +207,11 @@ class HomeViewModel(
             )
         }
     }
-    fun markProviderNotificationPopupShown() {
-        _uiState.update {
-            it.copy(
-                providerNotificationPopupShown = true
-            )
-        }
-    }
 
     fun markConsumerNotificationsViewed() {
         _uiState.update {
             it.copy(
                 consumerNotificationsViewed = true
-            )
-        }
-    }
-
-    fun markConsumerNotificationPopupShown() {
-        _uiState.update {
-            it.copy(
-                notificationPopupShown = true
             )
         }
     }
@@ -289,14 +267,6 @@ class HomeViewModel(
                 }
             }
         }
-    }
-
-    //refresh
-    fun refreshAllFoods() {
-        loadAllFoods()
-    }
-    fun refreshProviderFoods(providerId: String) {
-        loadProviderFoods(providerId)
     }
 
     fun deleteFood(

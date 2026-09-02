@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -316,23 +318,21 @@ class AddFoodViewModel(
         }
     }
 
+    //ADD
     private fun validatePickupTime(
         pickupTime: String
     ): String? {
-
         return try {
-
             val parts = pickupTime.split(" - ")
 
             if (parts.size != 2) {
                 return "Please select both start and end time"
             }
 
-            val formatter =
-                DateTimeFormatter.ofPattern(
-                    "hh:mm a",
-                    Locale.ENGLISH
-                )
+            val formatter = DateTimeFormatter.ofPattern(
+                "hh:mm a",
+                Locale.ENGLISH
+            )
 
             val start = LocalTime.parse(
                 parts[0].trim(),
@@ -344,27 +344,67 @@ class AddFoodViewModel(
                 formatter
             )
 
-            val now = LocalTime.now()
+            val now = LocalDateTime.now()
+            val today = LocalDate.now()
 
-            // Start must be in the future
-            if (!start.isAfter(now)) {
+            // --------------------------------
+            // 1. Determine start date
+            // --------------------------------
+            var startDate = today
+
+            if (!start.isAfter(now.toLocalTime())) {
+                startDate = today.plusDays(1)
+            }
+
+            val startDateTime = LocalDateTime.of(
+                startDate,
+                start
+            )
+
+            // --------------------------------
+            // 2. Determine end date
+            // --------------------------------
+            var endDate = startDate
+
+            // Example:
+            // 11:00 PM - 1:00 AM
+            // end time is earlier than start time,
+            // so the end is on the next day.
+            if (end.isBefore(start)) {
+                endDate = startDate.plusDays(1)
+            }
+
+            val endDateTime = LocalDateTime.of(
+                endDate,
+                end
+            )
+
+            // --------------------------------
+            // 3. Start must be in the future
+            // --------------------------------
+            if (!startDateTime.isAfter(now)) {
                 return "Start time must be in the future"
             }
 
-            var  durationMinutes =
-                Duration.between(start, end).toMinutes()
+            // --------------------------------
+            // 4. Calculate duration
+            // --------------------------------
+            val durationMinutes =
+                Duration.between(
+                    startDateTime,
+                    endDateTime
+                ).toMinutes()
 
-            // If end time is earlier than start time,
-            // assume the pickup period continues into the next day.
-            if (durationMinutes <= 0) {
-                durationMinutes += 24 * 60
-            }
-
-            // Maximum pickup period should not exceed 24 hours.
+            // --------------------------------
+            // 5. Maximum 24 hours
+            // --------------------------------
             if (durationMinutes > 24 * 60) {
                 return "Pickup time range cannot exceed 24 hours"
             }
-            // Minimum 30 minutes
+
+            // --------------------------------
+            // 6. Minimum 30 minutes
+            // --------------------------------
             if (durationMinutes < 30) {
                 return "Pickup time must be at least 30 minutes"
             }
@@ -372,7 +412,6 @@ class AddFoodViewModel(
             null
 
         } catch (e: Exception) {
-
             "Invalid pickup time"
         }
     }

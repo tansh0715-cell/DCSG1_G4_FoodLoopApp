@@ -35,7 +35,7 @@ import com.example.assignment.screen.home.HomeScreen
 import com.example.assignment.screen.notification.NotificationScreen
 import com.example.assignment.screen.order.OrderDetailScreen
 import com.example.assignment.screen.order.OrderScreen
-import com.example.assignment.screen.order.ReservationHistoryScreen
+import com.example.assignment.screen.profileModule.ReservationHistoryScreen
 import com.example.assignment.screen.home.ProviderHomeScreen
 import com.example.assignment.screen.notification.ProviderNotificationScreen
 import com.example.assignment.screen.order.ProviderOrderScreen

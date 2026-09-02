@@ -69,7 +69,10 @@ fun OrderScreen(
     val restaurantsByOrderId by orderViewModel.restaurantByOrderId.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadConsumerOrders()
+        while (true) {
+            orderViewModel.loadConsumerOrders()
+            kotlinx.coroutines.delay(30_000)
+        }
     }
 
     Column(
@@ -151,7 +154,12 @@ fun ProviderOrderScreen(
     }
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadProviderOrders()
+        while (true) {
+            orderViewModel.loadProviderOrders()
+
+            // Re-check every 30 seconds
+            kotlinx.coroutines.delay(30_000)
+        }
     }
 
     Column(
@@ -237,8 +245,9 @@ fun ProviderOrderScreen(
                         orderViewModel.loadProviderOrders()
                     },
 
-                    onError = {
-                        pickupError = "Invalid pickup code."
+                    onError = { error ->
+                        pickupError =
+                            error.message ?: "Unable to complete order."
                     }
                 )
             }

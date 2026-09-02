@@ -94,8 +94,8 @@ class OrderRepository(
         orderId: String,
         providerId: String,
         pickupCode: String
-    ): Order {
-        return supabase
+    ): Order? {
+       supabase
             .postgrest
             .rpc(
                 "mark_order_done",
@@ -105,7 +105,8 @@ class OrderRepository(
                     p_pickup_code = pickupCode
                 )
             )
-            .decodeSingle<Order>()
+        // Fetch the updated order after RPC
+        return getOrderById(orderId)
     }
 
     suspend fun getOrderById(orderId: String): Order? {

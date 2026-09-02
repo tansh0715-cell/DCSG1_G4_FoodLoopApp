@@ -50,6 +50,21 @@ class ProfileViewModel(
     var licensePhotoUri by mutableStateOf("")
         private set
 
+    // Restaurant picture (editable, stored in food_providers.restaurant_picture and restaurants.image_url)
+    var restaurantPicture by mutableStateOf<String?>(null)
+        private set
+
+    var pendingRestaurantImageBytes by mutableStateOf<ByteArray?>(null)
+        private set
+
+    fun setPendingRestaurantImage(bytes: ByteArray) {
+        pendingRestaurantImageBytes = bytes
+    }
+
+    fun clearPendingRestaurantImage() {
+        pendingRestaurantImageBytes = null
+    }
+
     var isProfileLoaded by mutableStateOf(false)
         private set
 
@@ -82,6 +97,14 @@ class ProfileViewModel(
                         phone = provider.phone
                         address = provider.address
                         licensePhotoUri = provider.licensePhotoUri
+                        restaurantPicture = provider.restaurantPicture
+                        // Also check restaurants.image_url as fallback (sync source)
+                        if (restaurantPicture.isNullOrBlank()) {
+                            try {
+                                val restaurant = repository.getRestaurantByProvider(userId)
+                                restaurantPicture = restaurant?.image_url
+                            } catch (_: Exception) {}
+                        }
                         isProfileLoaded = true
                     } else {
                         errorMessage = "Profile not found"
@@ -164,12 +187,20 @@ class ProfileViewModel(
                         )
                     }
                     "FOOD_PROVIDER" -> {
+                        var uploadedUrl: String? = null
+                        // Upload pending restaurant picture to restaurant-images on Save Changes
+                        pendingRestaurantImageBytes?.let { bytes ->
+                            uploadedUrl = repository.uploadRestaurantPicture(userId, bytes)
+                            restaurantPicture = uploadedUrl
+                        }
                         repository.updateFoodProvider(
                             userId = userId,
                             restaurantName = restaurantName,
                             phone = phone,
-                            address = address
+                            address = address,
+                            restaurantPictureUrl = uploadedUrl ?: restaurantPicture
                         )
+                        pendingRestaurantImageBytes = null
                     }
                     else -> throw Exception("Unknown user role")
                 }

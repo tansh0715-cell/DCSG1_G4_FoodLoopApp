@@ -1,6 +1,7 @@
 package com.example.assignment.screen.profileModule
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,15 +30,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -93,8 +99,8 @@ fun ProfileScreen(
     val orders by orderViewModel
         ?.orders
         ?.collectAsStateWithLifecycle()
-        ?: androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf(emptyList())
+        ?: remember {
+            mutableStateOf(emptyList())
         }
 
     // Food information for each order
@@ -145,11 +151,23 @@ fun ProfileScreen(
     }
 
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
     ) {
+
+        // Title — same as My Reservations (OrderScreen.kt:83)
+        Text(
+            text = "Profile",
+            fontSize = 24.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 16.dp, bottom = 16.dp)
+        )
 
         // ==============================
         // Profile header
@@ -159,14 +177,12 @@ fun ProfileScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
 
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme.colorScheme.background
-                ),
+            ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(170.dp)
+                    .height(150.dp)
+                    .padding(horizontal = 20.dp),
+                elevation = CardDefaults.cardElevation(5.dp)
             ) {
 
                 Column(
@@ -175,18 +191,35 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
 
-                    Image(
-                        painter = painterResource(
-                            R.drawable.ic_launcher_background
-                        ),
-                        contentDescription =
-                            "ProfilePicture",
-                        contentScale =
-                            ContentScale.Crop,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .size(80.dp)
-                    )
+                    // Profile picture — hidden for saver, provider reads from restaurantPicture
+                    if (profileViewModel.role == "FOOD_PROVIDER") {
+                        val avatarUrl = profileViewModel.restaurantPicture
+                        if (!avatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = "ProfilePicture",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .size(80.dp)
+                                    .border(1.dp, androidx.compose.ui.graphics.Color(0xFFE2E8F0), CircleShape)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(
+                                    R.drawable.ic_launcher_background
+                                ),
+                                contentDescription =
+                                    "ProfilePicture",
+                                contentScale =
+                                    ContentScale.Crop,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .size(80.dp)
+                            )
+                        }
+                    }
+
 
                     if (profileViewModel.isLoading && !profileViewModel.isProfileLoaded) {
                         Box(
@@ -226,8 +259,7 @@ fun ProfileScreen(
         if (orderViewModel != null) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 20.dp),
+                    .fillMaxWidth(),
                 horizontalArrangement =
                     Arrangement.SpaceEvenly
             ) {
@@ -237,7 +269,8 @@ fun ProfileScreen(
                 modifier = Modifier.size(
                     width = 100.dp,
                     height = 80.dp
-                )
+                ),
+                elevation = CardDefaults.cardElevation(5.dp)
             ) {
 
                 Column(
@@ -272,7 +305,9 @@ fun ProfileScreen(
                 modifier = Modifier.size(
                     width = 120.dp,
                     height = 80.dp
-                )
+                ),
+                elevation = CardDefaults.cardElevation(5.dp)
+
             ) {
 
                 Column(
@@ -307,7 +342,8 @@ fun ProfileScreen(
                 modifier = Modifier.size(
                     width = 100.dp,
                     height = 80.dp
-                )
+                ),
+                elevation = CardDefaults.cardElevation(5.dp)
             ) {
 
                 Column(
@@ -342,7 +378,7 @@ fun ProfileScreen(
         // ==============================
         // Profile options
         // ==============================
-
+        Spacer(modifier = Modifier.height(20.dp))
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment =
@@ -352,7 +388,8 @@ fun ProfileScreen(
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 20.dp),
+                elevation = CardDefaults.cardElevation(5.dp)
             ) {
 
                 ListItem(
