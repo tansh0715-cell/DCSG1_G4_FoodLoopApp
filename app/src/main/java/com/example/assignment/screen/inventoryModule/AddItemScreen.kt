@@ -172,7 +172,7 @@ fun AddItemScreen(
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.PhotoLibrary,
+                    painter = painterResource(R.drawable.add_photo_alternate_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                     contentDescription = "Select photo",
                     modifier = Modifier.size(48.dp),
                     tint = Color.Gray
@@ -189,9 +189,11 @@ fun AddItemScreen(
                 onClick = { galleryLauncher.launch("image/*") },
                 modifier = Modifier.padding(end = 8.dp)
             ) {
-                Icon(Icons.Default.PhotoLibrary, contentDescription = null)
+                Icon(painter = painterResource(R.drawable.add_photo_alternate_24dp_e3e3e3_fill0_wght400_grad0_opsz24), contentDescription = null
+                ,tint = Color.White)
                 Spacer(Modifier.size(4.dp))
-                Text("Gallery")
+                Text("Gallery",
+                    color = MaterialTheme.colorScheme.background)
             }
             Button(
                 onClick = {
@@ -204,9 +206,11 @@ fun AddItemScreen(
                     }
                 }
             ) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                Icon(painter = painterResource(R.drawable.add_a_photo_24dp_e3e3e3_fill0_wght400_grad0_opsz24), contentDescription = null
+                , tint = Color.White)
                 Spacer(Modifier.size(4.dp))
-                Text("Camera")
+                Text("Camera",
+                    color = MaterialTheme.colorScheme.background)
             }
         }
 

@@ -157,7 +157,7 @@ fun EditProfileScreen(
                         // License Photo display (read-only)
                         if (viewModel.licensePhotoUri.isNotBlank()) {
                             Text(
-                                text = "License Photo (read-only)",
+                                text = "License Photo",
                                 style = MaterialTheme.typography.labelMedium
                             )
                             AsyncImage(
@@ -255,9 +255,11 @@ fun EditProfileScreen(
                                     .padding(end = 8.dp),
                                 strokeWidth = 2.dp
                             )
-                            Text("Saving...")
+                            Text("Saving...",
+                                color = MaterialTheme.colorScheme.background)
                         } else {
-                            Text("Save Changes")
+                            Text("Save Changes",
+                                color = MaterialTheme.colorScheme.background)
                         }
                     }
 

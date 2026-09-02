@@ -511,7 +511,7 @@ fun ProfileScreen(
                             MaterialTheme.colorScheme.background
                     ),
                     modifier = Modifier.clickable {
-
+                        navController.navigate("CHANGE_PASSWORD")
                     }
                 )
 

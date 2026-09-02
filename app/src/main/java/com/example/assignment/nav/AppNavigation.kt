@@ -49,6 +49,7 @@ import com.example.assignment.screen.login.ResetPasswordScreen
 import com.example.assignment.screen.payment.PaymentScreen
 import com.example.assignment.screen.payment.PaymentSuccessScreen
 import com.example.assignment.screen.profileModule.AchievementScreen
+import com.example.assignment.screen.profileModule.ChangePasswordScreen
 import com.example.assignment.screen.profileModule.EditProfileScreen
 import com.example.assignment.screen.profileModule.ProfileScreen
 import com.example.assignment.screen.register.RegisterScreen
@@ -65,6 +66,7 @@ import com.example.assignment.viewmodel.inventory.InventoryViewModel
 import com.example.assignment.viewmodel.inventory.InventoryViewModelFactory
 import com.example.assignment.viewmodel.order.OrderViewModel
 import com.example.assignment.viewmodel.order.OrderViewModelFactory
+import com.example.assignment.viewmodel.profile.ChangePasswordViewModel
 import com.example.assignment.viewmodel.profile.ProfileViewModel
 import com.example.assignment.viewmodel.profile.ProfileViewModelFactory
 import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModel
@@ -866,6 +868,24 @@ fun AppNavigation(
                     innerPadding = innerPadding,
                     navController = navController,
                     viewModel = profileViewModel
+                )
+            }
+        }
+
+        composable("CHANGE_PASSWORD") {
+            val changePasswordViewModel = androidx.lifecycle.viewmodel.compose.viewModel<ChangePasswordViewModel>(
+                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                        return ChangePasswordViewModel(authRepository) as T
+                    }
+                }
+            )
+            Scaffold(topBar = { AppTopBar("Change Password", navController) }) { innerPadding ->
+                ChangePasswordScreen(
+                    innerPadding = innerPadding,
+                    navController = navController,
+                    viewModel = changePasswordViewModel
                 )
             }
         }
