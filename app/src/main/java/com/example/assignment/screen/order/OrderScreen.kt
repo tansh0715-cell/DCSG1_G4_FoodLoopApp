@@ -69,7 +69,10 @@ fun OrderScreen(
     val restaurantsByOrderId by orderViewModel.restaurantByOrderId.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadConsumerOrders()
+        while (true) {
+            orderViewModel.loadConsumerOrders()
+            kotlinx.coroutines.delay(30_000)
+        }
     }
 
     Column(
@@ -152,7 +155,7 @@ fun ProviderOrderScreen(
 
     LaunchedEffect(Unit) {
         while (true) {
-            orderViewModel.loadConsumerOrders()
+            orderViewModel.loadProviderOrders()
 
             // Re-check every 30 seconds
             kotlinx.coroutines.delay(30_000)
