@@ -13,9 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -36,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,35 +65,44 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val userPreferencesManager = remember { UserPreferencesManager(context) }
-
-    val loginViewModel: LoginViewModel = viewModel(
-        factory = LoginViewModel.Factory(
-            authRepository = authRepository,
-            userPreferencesManager = userPreferencesManager
+    val loginViewModel: LoginViewModel =
+        viewModel(
+            factory = LoginViewModel.Factory(
+                authRepository = authRepository,
+                userPreferencesManager = userPreferencesManager
+            )
         )
-    )
+    var passwordVisible by remember { mutableStateOf(false) }
+    var isCheckingSession by remember { mutableStateOf(true) }
 
     LaunchedEffect(loginViewModel.message) {
         loginViewModel.message?.let { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                message,
+                Toast.LENGTH_SHORT
+            ).show()
             loginViewModel.clearMessage()
         }
     }
 
-    var isCheckingSession by remember { mutableStateOf(true) }
-
-    // 检查是否已登录
     LaunchedEffect(Unit) {
         val currentUser = supabase.auth.currentUserOrNull()
         if (currentUser != null) {
             try {
                 val userId = currentUser.id
-
-                val saver = supabase.from("food_savers")
-                    .select {
-                        filter { eq("user_id", userId) }
-                    }
-                    .decodeSingleOrNull<FoodSaver>()
+                val saver =
+                    supabase
+                        .from("food_savers")
+                        .select {
+                            filter {
+                                eq(
+                                    "user_id",
+                                    userId
+                                )
+                            }
+                        }
+                        .decodeSingleOrNull<FoodSaver>()
 
                 if (saver != null) {
                     onFoodSaverLogin()
@@ -95,25 +110,30 @@ fun LoginScreen(
                     return@LaunchedEffect
                 }
 
-                val provider = supabase.from("food_providers")
-                    .select {
-                        filter { eq("user_id", userId) }
-                    }
-                    .decodeSingleOrNull<FoodProvider>()
+                val provider =
+                    supabase
+                        .from("food_providers")
+                        .select {
+                            filter {
+                                eq(
+                                    "user_id",
+                                    userId
+                                )
+                            }
+                        }
+                        .decodeSingleOrNull<FoodProvider>()
 
                 if (provider != null) {
                     onFoodProviderLogin()
                     isCheckingSession = false
                     return@LaunchedEffect
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (_: Exception) { }
         }
         isCheckingSession = false
     }
 
-    // ✅ 检查会话时显示加载圈（而不是 "Checking session..."）
+    // CHECKING SESSION LOADING
     if (isCheckingSession) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -127,7 +147,7 @@ fun LoginScreen(
         return
     }
 
-    // ===== 登录表单 =====
+    // LOGIN PAGE
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -146,15 +166,14 @@ fun LoginScreen(
 
         Text(
             text = "Welcome Back",
-            style = MaterialTheme.typography.headlineLarge
-                .copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
 
         Text(
             text = "Sign in to continue saving food",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography .bodyMedium,
             color = Color.LightGray,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
@@ -163,36 +182,86 @@ fun LoginScreen(
 
         OutlinedTextField(
             value = loginViewModel.email,
-            onValueChange = { loginViewModel.email = it },
+            onValueChange = {
+                loginViewModel.email = it
+                loginViewModel.clearEmailError()
+            },
             label = { Text("Email") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth(),
+            isError = loginViewModel.emailError != null,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedLabelColor = Color.LightGray,
-                unfocusedLabelColor = Color.LightGray
-            )
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
+        loginViewModel.emailError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedTextField(
             value = loginViewModel.password,
-            onValueChange = { loginViewModel.password = it },
+            onValueChange = {
+                loginViewModel.password = it
+                loginViewModel.clearPasswordError()
+            },
             label = { Text("Password") },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (passwordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            isError = loginViewModel.passwordError != null,
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }
+                ) {
+                    Icon(
+                        imageVector = if (passwordVisible) {
+                            Icons.Default.VisibilityOff
+                        } else {
+                            Icons.Default.Visibility
+                        },
+                        contentDescription = if (passwordVisible) {
+                            "Hide password"
+                        } else {
+                            "Show password"
+                        }
+                    )
+                }
+            },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedLabelColor = Color.LightGray,
-                unfocusedLabelColor = Color.LightGray
-            )
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                errorTextColor = Color.Black
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
+        loginViewModel.passwordError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography .bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
-            TextButton(onClick = { onForgotPassword() }) {
+            TextButton(
+                onClick = { onForgotPassword() }
+            ) {
                 Text(
                     text = "Forgot?",
                     style = MaterialTheme.typography.bodyMedium,
@@ -204,7 +273,10 @@ fun LoginScreen(
         Button(
             onClick = {
                 loginViewModel.login { accountType ->
-                    if (accountType == "FOOD_SAVER") {
+                    if (
+                        accountType ==
+                        "FOOD_SAVER"
+                    ) {
                         onFoodSaverLogin()
                     } else {
                         onFoodProviderLogin()
@@ -215,18 +287,25 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2E7D32),
-                contentColor = Color(0xFF2E7D32),
+                contentColor = Color.White,
                 disabledContainerColor = Color(0xFF2E7D32),
-                disabledContentColor = Color(0xFF2E7D32)
+                disabledContentColor = Color.White
             )
         ) {
-            Text(
-                text = "Login",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
-            )
+            if (loginViewModel.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = "Login",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
+            }
         }
-
         Spacer(modifier = Modifier.height(2.dp))
 
         Row(
@@ -239,7 +318,10 @@ fun LoginScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray
             )
-            TextButton(onClick = { onRegister() }) {
+
+            TextButton(
+                onClick = { onRegister() }
+            ) {
                 Text(
                     text = "Register",
                     style = MaterialTheme.typography.bodyMedium,
