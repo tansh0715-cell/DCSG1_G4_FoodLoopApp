@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
             }
             "login-callback" -> {
                 Log.d("DeepLink", "Legacy login-callback")
+
             }
             else -> {
                 Log.d("DeepLink", "Unknown host: ${uri.host}")

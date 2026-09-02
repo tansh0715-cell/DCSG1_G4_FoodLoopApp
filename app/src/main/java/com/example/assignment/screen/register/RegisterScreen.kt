@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -60,7 +61,10 @@ fun RegisterScreen(
     authRepository: AuthRepository,
     onRegisterSuccess: () -> Unit,
     onBackToChoose: () -> Unit,
-    viewModel: RegisterViewModel = viewModel(factory = RegisterViewModel.Factory(authRepository))
+    viewModel: RegisterViewModel =
+        viewModel(
+            factory = RegisterViewModel.Factory(authRepository)
+        )
 ) {
     val context = LocalContext.current
     val locationTracker = remember {
@@ -72,20 +76,11 @@ fun RegisterScreen(
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-
             val granted =
-                permissions[
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ] == true ||
-
-                        permissions[
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        ] == true
-
+                permissions[ Manifest.permission.ACCESS_FINE_LOCATION ] == true ||
+                        permissions[ Manifest.permission.ACCESS_COARSE_LOCATION ] == true
             if (granted) {
-
                 locationTracker.start { location ->
-
                     viewModel.setProviderLocation(
                         latitude = location.latitude,
                         longitude = location.longitude
@@ -95,9 +90,7 @@ fun RegisterScreen(
         }
 
     DisposableEffect(accountType) {
-
         if (accountType == "FOOD_PROVIDER") {
-
             val hasPermission =
                 ContextCompat.checkSelfPermission(
                     context,
@@ -109,17 +102,13 @@ fun RegisterScreen(
                         ) == PackageManager.PERMISSION_GRANTED
 
             if (hasPermission) {
-
                 locationTracker.start { location ->
-
                     viewModel.setProviderLocation(
                         latitude = location.latitude,
                         longitude = location.longitude
                     )
                 }
-
             } else {
-
                 locationPermissionLauncher.launch(
                     arrayOf(
                         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -134,15 +123,24 @@ fun RegisterScreen(
         }
     }
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        viewModel.licensePhotoUri = uri
-    }
+    val photoPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri ->
+            viewModel.licensePhotoUri = uri
+            if (uri != null) {
+                viewModel.clearLicensePhotoError()
+            }
+        }
 
+    // General Message
     LaunchedEffect(viewModel.message) {
         viewModel.message?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_SHORT
+            ).show()
             viewModel.clearMessage()
         }
     }
@@ -151,25 +149,27 @@ fun RegisterScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll( rememberScrollState() ),
         verticalArrangement = Arrangement.Top
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBackToChoose) {
+            IconButton(
+                onClick = onBackToChoose
+            ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back"
                 )
             }
+
             Text(
                 text = "Create Account",
-                style = MaterialTheme.typography.titleMedium
-                    .copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center
+                textAlign =  TextAlign.Center
             )
             Spacer(modifier = Modifier.width(48.dp))
         }
@@ -193,12 +193,20 @@ fun RegisterScreen(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = if (accountType == "FOOD_SAVER") "Food Saver" else "Food Provider",
+                text =
+                    if (
+                        accountType == "FOOD_SAVER"
+                    ) {
+                        "Food Saver"
+                    } else {
+                        "Food Provider"
+                    },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                textAlign =TextAlign.Center
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -206,92 +214,254 @@ fun RegisterScreen(
         if (accountType == "FOOD_SAVER") {
             OutlinedTextField(
                 value = viewModel.name,
-                onValueChange = { viewModel.name = it },
+                onValueChange = {
+                    viewModel.name = it
+                    viewModel.clearNameError()
+                },
                 label = { Text("Name") },
+                isError = viewModel.nameError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.nameError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.email,
-                onValueChange = { viewModel.email = it },
+                onValueChange = {
+                    viewModel.email = it
+                    viewModel.clearEmailError()
+                },
                 label = { Text("Email") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                isError = viewModel.emailError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.emailError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.phone,
-                onValueChange = { viewModel.phone = it },
+                onValueChange = {
+                    viewModel.phone = it
+                    viewModel.clearPhoneError()
+                },
                 label = { Text("Phone") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = viewModel.phoneError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.phoneError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.password,
-                onValueChange = { viewModel.password = it },
+                onValueChange = {
+                    viewModel.password = it
+                    viewModel.clearPasswordError()
+                },
                 label = { Text("Password") },
                 visualTransformation = PasswordVisualTransformation(),
+                isError = viewModel.passwordError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            viewModel.passwordError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.confirmPassword,
-                onValueChange = { viewModel.confirmPassword = it },
+                onValueChange = {
+                    viewModel.confirmPassword = it
+                    viewModel.clearConfirmPasswordError()
+                },
                 label = { Text("Confirm Password") },
                 visualTransformation = PasswordVisualTransformation(),
+                isError = viewModel.confirmPasswordError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.confirmPasswordError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp )
+                )
+            }
             Spacer(modifier = Modifier.height(20.dp))
+
         } else {
             OutlinedTextField(
                 value = viewModel.restaurantName,
-                onValueChange = { viewModel.restaurantName = it },
+                onValueChange = {
+                    viewModel.restaurantName = it
+                    viewModel.clearRestaurantNameError()
+                },
                 label = { Text("Restaurant Name") },
+                isError = viewModel.restaurantNameError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.restaurantNameError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.email,
-                onValueChange = { viewModel.email = it },
+                onValueChange = {
+                    viewModel.email = it
+                    viewModel.clearEmailError()
+                },
                 label = { Text("Email") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                isError = viewModel.emailError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.emailError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp,  top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.phone,
-                onValueChange = { viewModel.phone = it },
+                onValueChange = {
+                    viewModel.phone = it
+                    viewModel.clearPhoneError()
+                },
                 label = { Text("Phone") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = viewModel.phoneError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.phoneError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
-                value = viewModel.address,
-                onValueChange = { viewModel.address = it },
-                label = { Text("Address") },
+                value =viewModel.address,
+                onValueChange = {
+                    viewModel.address = it
+                    viewModel.clearAddressError()
+                },
+                label = { Text("Address")},
+                isError = viewModel.addressError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.addressError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .border(
-                        width = 1.dp,
-                        color = Color.Gray,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable { photoPickerLauncher.launch("image/*") },
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .border(
+                            width = 1.dp,
+                            color =
+                                if (viewModel.licensePhotoError != null) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    Color.Gray
+                                },
+                            shape =RoundedCornerShape(12.dp)
+                        )
+                        .clickable { photoPickerLauncher .launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
                 if (viewModel.licensePhotoUri != null) {
@@ -309,30 +479,86 @@ fun RegisterScreen(
                     )
                 }
             }
+            viewModel.licensePhotoError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = viewModel.password,
-                onValueChange = { viewModel.password = it },
+                onValueChange = {
+                    viewModel.password = it
+                    viewModel.clearPasswordError()
+                },
                 label = { Text("Password") },
                 visualTransformation = PasswordVisualTransformation(),
+                isError = viewModel.passwordError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+            viewModel.passwordError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
+
 
             OutlinedTextField(
                 value = viewModel.confirmPassword,
-                onValueChange = { viewModel.confirmPassword = it },
+                onValueChange = {
+                    viewModel.confirmPassword = it
+                    viewModel.clearConfirmPasswordError()
+                },
                 label = { Text("Confirm Password") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation =PasswordVisualTransformation(),
+                isError = viewModel.confirmPasswordError != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    errorTextColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            viewModel.confirmPasswordError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(20.dp))
+        }
+        viewModel.locationError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+            )
         }
 
         Button(
             onClick = {
-                viewModel.register(accountType = accountType, onRegisterSuccess = onRegisterSuccess)
+                viewModel.register(
+                    accountType = accountType,
+                    context = context,
+                    onRegisterSuccess = onRegisterSuccess
+                )
             },
             enabled = !viewModel.isLoading,
             modifier = Modifier.fillMaxWidth()

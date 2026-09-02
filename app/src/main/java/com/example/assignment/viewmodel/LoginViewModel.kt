@@ -18,7 +18,6 @@ class LoginViewModel(
     private val authRepository: AuthRepository,
     private val userPreferencesManager: UserPreferencesManager
 ) : ViewModel() {
-
     var email by mutableStateOf("")
     var password by mutableStateOf("")
     var isLoading by mutableStateOf(false)
@@ -37,18 +36,25 @@ class LoginViewModel(
                     email = email.trim().lowercase(),
                     password = password
                 )
-
                 val userId = supabase.auth.currentUserOrNull()?.id
                     ?: throw Exception("User ID not found after login")
-                userPreferencesManager.saveUserData(accountType, userId)
-
+                userPreferencesManager.saveUserData(
+                    accountType,
+                    userId
+                )
                 when (accountType) {
-                    "FOOD_SAVER" -> onSuccess("FOOD_SAVER")
-                    "FOOD_PROVIDER" -> onSuccess("FOOD_PROVIDER")
-                    else -> message  = "Account type is not found"
+                    "FOOD_SAVER" -> { onSuccess("FOOD_SAVER") }
+                    "FOOD_PROVIDER" -> { onSuccess("FOOD_PROVIDER") }
+                    else -> { message = "Account type is not found" }
                 }
+
             } catch (e: Exception) {
-                message  = "Login failed. \nPlease check your email or password."
+                message = when (e.message) {
+                    "EMAIL_NOT_VERIFIED" ->
+                        "Your email hasn't been verified yet. Please check your inbox."
+                    else ->
+                        "Login failed. Please check your email or password."
+                }
             } finally {
                 isLoading = false
             }
@@ -60,13 +66,19 @@ class LoginViewModel(
     }
 
     companion object {
+
         fun Factory(
             authRepository: AuthRepository,
             userPreferencesManager: UserPreferencesManager
-        ): ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                LoginViewModel(authRepository, userPreferencesManager)
+        ): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer {
+
+                    LoginViewModel(
+                        authRepository,
+                        userPreferencesManager
+                    )
+                }
             }
-        }
     }
 }

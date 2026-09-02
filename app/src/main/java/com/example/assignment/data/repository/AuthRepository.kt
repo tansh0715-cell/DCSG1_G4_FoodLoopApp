@@ -7,40 +7,41 @@ import com.example.assignment.model.Restaurant
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
-import java.util.UUID
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class AuthRepository {
+
+    // =========================
+    // FOOD SAVER REGISTER
+    // =========================
     suspend fun registerFoodSaver(
         name: String,
         email: String,
         phone: String,
         password: String
-    ){
+    ) {
         val cleanEmail = email.trim().lowercase()
 
-        supabase.auth.signUpWith(Email){
+        supabase.auth.signUpWith(
+            Email,
+            redirectUrl = "com.example.assignment://login-callback"
+        ) {
             this.email = cleanEmail
             this.password = password
+
+            data = buildJsonObject {
+                put("account_type", "FOOD_SAVER")
+                put("name", name.trim())
+                put("phone", phone.trim())
+            }
         }
-
-        supabase.auth.signInWith(Email) {
-            this.email = cleanEmail
-            this.password = password
-        }
-
-        val user = supabase.auth.currentUserOrNull() ?: throw Exception("User account created but user session is not available.")
-
-        val foodSaver = FoodSaver(
-            user_id = user.id,
-            name = name.trim(),
-            email = cleanEmail,
-            phone = phone.trim()
-        )
-
-        supabase.from("food_savers").insert(foodSaver)
-
     }
 
+
+    // =========================
+    // FOOD PROVIDER REGISTER
+    // =========================
     suspend fun registerFoodProvider(
         restaurantName: String,
         email: String,
@@ -50,59 +51,32 @@ class AuthRepository {
         password: String,
         latitude: Double,
         longitude: Double
-    ){
-
+    ) {
         val cleanEmail = email.trim().lowercase()
 
-        supabase.auth.signUpWith(Email) {
+        supabase.auth.signUpWith(
+            Email,
+            redirectUrl = "com.example.assignment://login-callback"
+        ) {
             this.email = cleanEmail
             this.password = password
-        }
 
-        supabase.auth.signInWith(Email) {
-            this.email = cleanEmail
-            this.password = password
-        }
-
-        val user = supabase.auth.currentUserOrNull() ?: throw Exception("User account created but user session is not available.")
-
-        val foodProvider = FoodProvider(
-            user_id = user.id,
-            restaurantName = restaurantName.trim(),
-            email = cleanEmail,
-            phone = phone.trim(),
-            address = address.trim(),
-            licensePhotoUri = licensePhoneUrl
-        )
-
-        val restaurant = Restaurant(
-            id = UUID.randomUUID().toString(),
-            provider_id = user.id,
-            name = restaurantName.trim(),
-            address = address.trim(),
-            latitude = latitude,
-            longitude = longitude
-        )
-
-        // Create Restaurant Profile
-        // Restaurant name comes directly from provider registration
-        supabase.from("food_providers").insert(foodProvider)
-        try{
-            supabase.from("restaurants").insert(restaurant)
-        } catch (e: Exception){
-            try{
-                supabase.from("food_providers").delete {
-                    filter {
-                        eq("user_id",foodProvider.user_id)
-                    }
-                }
-            }catch (rollbackEx: Exception){
-                e.message ?: "Rollback failed: \${rollbackEx.message}"
+            data = buildJsonObject {
+                put("account_type", "FOOD_PROVIDER")
+                put("restaurant_name", restaurantName.trim())
+                put("phone", phone.trim())
+                put("address", address.trim())
+                put("license_photo_uri", licensePhoneUrl)
+                put("latitude", latitude)
+                put("longitude", longitude)
             }
-            throw Exception("Restaurant registration failed: ${e.localizedMessage}")
         }
     }
 
+
+    // =========================
+    // LOGIN
+    // =========================
     suspend fun login(
         email: String,
         password: String
@@ -110,13 +84,35 @@ class AuthRepository {
 
         val cleanEmail = email.trim().lowercase()
 
-        supabase.auth.signInWith(Email) {
-            this.email = cleanEmail
-            this.password = password
+        try {
+            supabase.auth.signInWith(Email) {
+                this.email = cleanEmail
+                this.password = password
+            }
+        } catch (e: Exception) {
+
+            if (
+                e.message?.contains("email_not_confirmed", ignoreCase = true) == true ||
+                e.message?.contains("Email not confirmed", ignoreCase = true) == true
+            ) {
+                throw Exception("EMAIL_NOT_VERIFIED")
+            }
+
+            throw e
         }
 
-        val user = supabase.auth.currentUserOrNull() ?: throw Exception("Login failed")
+        val user = supabase.auth.currentUserOrNull()
+            ?: throw Exception("Login failed")
 
+        // Check Email Verification
+        if (user.emailConfirmedAt == null) {
+            supabase.auth.signOut()
+            throw Exception("EMAIL_NOT_VERIFIED")
+        }
+
+        // =========================
+        // CHECK FOOD SAVER
+        // =========================
         val foodSaver = supabase
             .from("food_savers")
             .select {
@@ -130,6 +126,9 @@ class AuthRepository {
             return "FOOD_SAVER"
         }
 
+        // =========================
+        // CHECK FOOD PROVIDER
+        // =========================
         val foodProvider = supabase
             .from("food_providers")
             .select {
@@ -140,12 +139,20 @@ class AuthRepository {
             .decodeSingleOrNull<FoodProvider>()
 
         if (foodProvider != null) {
-            val restaurant = supabase.from("restaurants").select {
-                filter { eq("provider_id", user.id) }
-            }.decodeSingleOrNull<Restaurant>()
 
-            if(restaurant == null){
-                throw Exception("Restaurant profile is missing. Registration was incomplete.")
+            val restaurant = supabase
+                .from("restaurants")
+                .select {
+                    filter {
+                        eq("provider_id", user.id)
+                    }
+                }
+                .decodeSingleOrNull<Restaurant>()
+
+            if (restaurant == null) {
+                throw Exception(
+                    "Restaurant profile is missing. Registration was incomplete."
+                )
             }
 
             return "FOOD_PROVIDER"
@@ -154,6 +161,10 @@ class AuthRepository {
         throw Exception("Account profile not found")
     }
 
+
+    // =========================
+    // GET FOOD PROVIDER
+    // =========================
     suspend fun getFoodProvider(
         userId: String
     ): FoodProvider? {
@@ -168,16 +179,25 @@ class AuthRepository {
             .decodeSingleOrNull<FoodProvider>()
     }
 
+
+    // =========================
+    // FORGOT PASSWORD
+    // =========================
     suspend fun resetPassword(
         email: String
     ) {
         val cleanEmail = email.trim().lowercase()
+
         supabase.auth.resetPasswordForEmail(
             email = cleanEmail,
             redirectUrl = "com.example.assignment://reset-callback"
         )
     }
 
+
+    // =========================
+    // UPDATE PASSWORD
+    // =========================
     suspend fun updatePassword(
         newPassword: String
     ) {
@@ -186,8 +206,11 @@ class AuthRepository {
         }
     }
 
+
+    // =========================
+    // LOGOUT
+    // =========================
     suspend fun logout() {
         supabase.auth.signOut()
     }
-
 }

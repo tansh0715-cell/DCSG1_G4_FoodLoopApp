@@ -94,5 +94,6 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.0")
 
     implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("androidx.core:core-ktx:1.19.0")
 
 }
