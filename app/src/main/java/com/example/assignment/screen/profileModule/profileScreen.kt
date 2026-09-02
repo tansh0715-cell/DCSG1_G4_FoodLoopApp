@@ -111,20 +111,41 @@ fun ProfileScreen(
             androidx.compose.runtime.mutableStateOf(emptyMap())
         }
 
+    // History orders (COMPLETED, already picked up) for stats
+    val historyOrders by orderViewModel
+        ?.historyOrders
+        ?.collectAsStateWithLifecycle()
+        ?: remember { mutableStateOf(emptyList()) }
+
+    val historyFoodByOrderId by orderViewModel
+        ?.historyFoodByOrderId
+        ?.collectAsStateWithLifecycle()
+        ?: remember { mutableStateOf(emptyMap()) }
+
 
     // ==============================
-    // Calculate Saver statistics
+    // Calculate Saver statistics — include reservation history
     // ==============================
 
-    val mealsSaved = orders.sumOf { order ->
+    // Combined paid orders = active + history distinct, payment_success = true
+    val combinedOrders = remember(orders, historyOrders) {
+        (orders + historyOrders).distinctBy { it.id }
+    }
+
+    // Merge food maps for moneySaved lookup
+    val combinedFoodMap = remember(foodsByOrderId, historyFoodByOrderId) {
+        foodsByOrderId + historyFoodByOrderId
+    }
+
+    val mealsSaved = combinedOrders.sumOf { order ->
         order.quantity
     }
 
-    val reservationCount = orders.size
+    val reservationCount = combinedOrders.size
 
-    val moneySaved = orders.sumOf { order ->
+    val moneySaved = combinedOrders.sumOf { order ->
 
-        val food = foodsByOrderId[order.id]
+        val food = combinedFoodMap[order.id]
 
         if (food != null) {
 
@@ -145,9 +166,8 @@ fun ProfileScreen(
     // ==============================
 
     LaunchedEffect(orderViewModel) {
-
         orderViewModel?.loadConsumerOrders()
-
+        orderViewModel?.loadReservationHistory()
     }
 
 
@@ -264,113 +284,113 @@ fun ProfileScreen(
                     Arrangement.SpaceEvenly
             ) {
 
-            // Meals Saved
-            ElevatedCard(
-                modifier = Modifier.size(
-                    width = 100.dp,
-                    height = 80.dp
-                ),
-                elevation = CardDefaults.cardElevation(5.dp)
-            ) {
-
-                Column(
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 15.dp)
+                // Meals Saved
+                ElevatedCard(
+                    modifier = Modifier.size(
+                        width = 100.dp,
+                        height = 80.dp
+                    ),
+                    elevation = CardDefaults.cardElevation(5.dp)
                 ) {
 
-                    Text(
-                        text = mealsSaved.toString(),
-                        color =
-                            MaterialTheme.colorScheme.primary,
-                        style =
-                            MaterialTheme.typography.headlineMedium
-                    )
+                    Column(
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 15.dp)
+                    ) {
 
-                    Text(
-                        text = "Meals Saved",
-                        color =
-                            MaterialTheme.colorScheme.onSecondary,
-                        style =
-                            MaterialTheme.typography.labelMedium
-                    )
+                        Text(
+                            text = mealsSaved.toString(),
+                            color =
+                                MaterialTheme.colorScheme.primary,
+                            style =
+                                MaterialTheme.typography.headlineMedium
+                        )
+
+                        Text(
+                            text = "Meals Saved",
+                            color =
+                                MaterialTheme.colorScheme.onSecondary,
+                            style =
+                                MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
-            }
 
 
-            // Money Saved
-            ElevatedCard(
-                modifier = Modifier.size(
-                    width = 120.dp,
-                    height = 80.dp
-                ),
-                elevation = CardDefaults.cardElevation(5.dp)
+                // Money Saved
+                ElevatedCard(
+                    modifier = Modifier.size(
+                        width = 120.dp,
+                        height = 80.dp
+                    ),
+                    elevation = CardDefaults.cardElevation(5.dp)
 
-            ) {
-
-                Column(
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 15.dp)
                 ) {
 
-                    Text(
-                        text = "RM %.2f".format(moneySaved),
-                        color =
-                            MaterialTheme.colorScheme.primary,
-                        style =
-                            MaterialTheme.typography.headlineMedium
-                    )
+                    Column(
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 15.dp)
+                    ) {
 
-                    Text(
-                        text = "Money Saved",
-                        color =
-                            MaterialTheme.colorScheme.onSecondary,
-                        style =
-                            MaterialTheme.typography.labelMedium
-                    )
+                        Text(
+                            text = "RM %.2f".format(moneySaved),
+                            color =
+                                MaterialTheme.colorScheme.primary,
+                            style =
+                                MaterialTheme.typography.headlineMedium
+                        )
+
+                        Text(
+                            text = "Money Saved",
+                            color =
+                                MaterialTheme.colorScheme.onSecondary,
+                            style =
+                                MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
-            }
 
 
-            // Reservations
-            ElevatedCard(
-                modifier = Modifier.size(
-                    width = 100.dp,
-                    height = 80.dp
-                ),
-                elevation = CardDefaults.cardElevation(5.dp)
-            ) {
-
-                Column(
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 15.dp)
+                // Reservations
+                ElevatedCard(
+                    modifier = Modifier.size(
+                        width = 100.dp,
+                        height = 80.dp
+                    ),
+                    elevation = CardDefaults.cardElevation(5.dp)
                 ) {
 
-                    Text(
-                        text = reservationCount.toString(),
-                        color =
-                            MaterialTheme.colorScheme.primary,
-                        style =
-                            MaterialTheme.typography.headlineMedium
-                    )
+                    Column(
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 15.dp)
+                    ) {
 
-                    Text(
-                        text = "Reservation",
-                        color =
-                            MaterialTheme.colorScheme.onSecondary,
-                        style =
-                            MaterialTheme.typography.labelMedium
-                    )
+                        Text(
+                            text = reservationCount.toString(),
+                            color =
+                                MaterialTheme.colorScheme.primary,
+                            style =
+                                MaterialTheme.typography.headlineMedium
+                        )
+
+                        Text(
+                            text = "Reservation",
+                            color =
+                                MaterialTheme.colorScheme.onSecondary,
+                            style =
+                                MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
-            }
             }
         }
 
@@ -415,33 +435,33 @@ fun ProfileScreen(
                     }
                 )
 
+                if (profileViewModel.role != "FOOD_PROVIDER"){
+                    ListItem(
+                        headlineContent = {
+                            Text(text = "Achievement")
+                        },
+                        trailingContent = {
 
-                ListItem(
-                    headlineContent = {
-                        Text(text = "Achievement")
-                    },
-                    trailingContent = {
+                            Icon(
+                                painter = painterResource(
+                                    R.drawable.arrow_forward_24dp_cccccc_fill0_wght400_grad0_opsz24
+                                ),
+                                contentDescription =
+                                    "Forward"
+                            )
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor =
+                                MaterialTheme.colorScheme.background
+                        ),
+                        modifier = Modifier.clickable {
 
-                        Icon(
-                            painter = painterResource(
-                                R.drawable.arrow_forward_24dp_cccccc_fill0_wght400_grad0_opsz24
-                            ),
-                            contentDescription =
-                                "Forward"
-                        )
-                    },
-                    colors = ListItemDefaults.colors(
-                        containerColor =
-                            MaterialTheme.colorScheme.background
-                    ),
-                    modifier = Modifier.clickable {
+                            navController.navigate("achievement") {
+                                launchSingleTop = true
+                            }
 
-                        navController.navigate("achievement") {
-                            launchSingleTop = true
                         }
-
-                    }
-                )
+                    )}
 
 
                 ListItem(
