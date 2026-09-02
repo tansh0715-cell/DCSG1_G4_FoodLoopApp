@@ -57,7 +57,8 @@ class ProfileRepository(
         restaurantName: String,
         phone: String,
         address: String,
-        restaurantPictureUrl: String? = null
+        restaurantPictureUrl: String? = null,
+        licensePhotoUrl: String? = null
     ) {
 
         supabase.from("food_providers")
@@ -68,6 +69,9 @@ class ProfileRepository(
                     set("address", address.trim())
                     if (restaurantPictureUrl != null) {
                         set("restaurant_picture", restaurantPictureUrl)
+                    }
+                    if (licensePhotoUrl != null) {
+                        set("licensePhotoUri", licensePhotoUrl)
                     }
                 }
             ) {
@@ -95,6 +99,18 @@ class ProfileRepository(
     ): String {
         val path = "$providerId/profile_${System.currentTimeMillis()}.jpg"
         val bucket = supabase.storage["restaurant-images"]
+        bucket.upload(path, imageBytes) {
+            upsert = true
+        }
+        return bucket.publicUrl(path)
+    }
+
+    suspend fun uploadLicensePhoto(
+        providerId: String,
+        imageBytes: ByteArray
+    ): String {
+        val path = "$providerId/license_${System.currentTimeMillis()}.jpg"
+        val bucket = supabase.storage["license-photos"]
         bucket.upload(path, imageBytes) {
             upsert = true
         }

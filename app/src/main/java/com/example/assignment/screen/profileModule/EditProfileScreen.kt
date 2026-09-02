@@ -163,22 +163,49 @@ fun EditProfileScreen(
                             minLines = 2
                         )
 
-                        // License Photo display (read-only)
-                        if (viewModel.licensePhotoUri.isNotBlank()) {
-                            Text(
-                                text = "License Photo",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                            AsyncImage(
-                                model = viewModel.licensePhotoUri,
-                                contentDescription = "License Photo",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-                            )
+                        // License Photo - editable to license-photos bucket
+                        var selectedLicenseUri by remember { mutableStateOf<Uri?>(null) }
+                        val licensePicker = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.GetContent()
+                        ) { uri: Uri? ->
+                            uri?.let {
+                                try {
+                                    context.contentResolver.openInputStream(it)?.use { input ->
+                                        val bytes = input.readBytes()
+                                        viewModel.setPendingLicenseImage(bytes)
+                                        selectedLicenseUri = it
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
+                        Text(
+                            text = "License Photo",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                .clickable { licensePicker.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val displayLicense = selectedLicenseUri?.toString() ?: viewModel.licensePhotoUri.takeIf { it.isNotBlank() }
+                            if (displayLicense != null) {
+                                AsyncImage(
+                                    model = displayLicense,
+                                    contentDescription = "License Photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    text = "Tap to upload license photo",
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
 
                         // Restaurant Picture - editable to restaurant-images bucket

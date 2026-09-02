@@ -65,6 +65,18 @@ class ProfileViewModel(
         pendingRestaurantImageBytes = null
     }
 
+    // License photo (now editable to license-photos bucket)
+    var pendingLicenseImageBytes by mutableStateOf<ByteArray?>(null)
+        private set
+
+    fun setPendingLicenseImage(bytes: ByteArray) {
+        pendingLicenseImageBytes = bytes
+    }
+
+    fun clearPendingLicenseImage() {
+        pendingLicenseImageBytes = null
+    }
+
     var isProfileLoaded by mutableStateOf(false)
         private set
 
@@ -187,20 +199,28 @@ class ProfileViewModel(
                         )
                     }
                     "FOOD_PROVIDER" -> {
-                        var uploadedUrl: String? = null
+                        var uploadedRestaurantUrl: String? = null
+                        var uploadedLicenseUrl: String? = null
                         // Upload pending restaurant picture to restaurant-images on Save Changes
                         pendingRestaurantImageBytes?.let { bytes ->
-                            uploadedUrl = repository.uploadRestaurantPicture(userId, bytes)
-                            restaurantPicture = uploadedUrl
+                            uploadedRestaurantUrl = repository.uploadRestaurantPicture(userId, bytes)
+                            restaurantPicture = uploadedRestaurantUrl
+                        }
+                        // Upload pending license photo to license-photos on Save Changes
+                        pendingLicenseImageBytes?.let { bytes ->
+                            uploadedLicenseUrl = repository.uploadLicensePhoto(userId, bytes)
+                            licensePhotoUri = uploadedLicenseUrl ?: licensePhotoUri
                         }
                         repository.updateFoodProvider(
                             userId = userId,
                             restaurantName = restaurantName,
                             phone = phone,
                             address = address,
-                            restaurantPictureUrl = uploadedUrl ?: restaurantPicture
+                            restaurantPictureUrl = uploadedRestaurantUrl ?: restaurantPicture,
+                            licensePhotoUrl = uploadedLicenseUrl
                         )
                         pendingRestaurantImageBytes = null
+                        pendingLicenseImageBytes = null
                     }
                     else -> throw Exception("Unknown user role")
                 }
