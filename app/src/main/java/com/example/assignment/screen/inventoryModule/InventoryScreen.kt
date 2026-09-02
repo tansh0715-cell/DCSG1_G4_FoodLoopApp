@@ -32,6 +32,7 @@ import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.model.inventoryModule.Food
 import com.example.assignment.ui.theme.appButtonColors
+import androidx.compose.ui.text.font.FontWeight
 import com.example.assignment.ui.theme.filterColors
 import com.example.assignment.viewmodel.inventory.InventoryViewModel
 import androidx.compose.ui.platform.LocalContext
@@ -75,7 +76,11 @@ fun InventoryScreen(innerPadding: PaddingValues, navController: NavController, v
             )
         }
 
-        LazyColumn( horizontalAlignment = Alignment.CenterHorizontally) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(bottom = 12.dp)
+        ) {
             items(vm.filteredFoods) { food -> ElevatedCard(modifier = Modifier.fillMaxSize()
                 .heightIn(min = 120.dp, max = 160.dp)
                 .padding(horizontal = 25.dp, vertical = 10.dp)
@@ -88,20 +93,21 @@ fun InventoryScreen(innerPadding: PaddingValues, navController: NavController, v
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = food.name,
-                            modifier = Modifier.offset(x = 10.dp,y=20.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        );
+                            modifier = Modifier.offset(x = 12.dp, y = 18.dp),
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Text(
                             text = food.reminder_days.toString() + " days until reminder",
-                            modifier = Modifier.offset(x = 10.dp,y=20.dp),
+                            modifier = Modifier.offset(x = 12.dp, y = 20.dp),
                             color = MaterialTheme.colorScheme.onSecondary,
-                            style = MaterialTheme.typography.bodyLarge
-                        );
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                        )
                         Text(
                             text = "Expire on " + food.expireDate,
-                            modifier = Modifier.offset(x = 10.dp,y=20.dp),
+                            modifier = Modifier.offset(x = 12.dp, y = 22.dp),
                             color = MaterialTheme.colorScheme.onSecondary,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
                         )
                     };
                     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) { StatusBadge(food.status)}

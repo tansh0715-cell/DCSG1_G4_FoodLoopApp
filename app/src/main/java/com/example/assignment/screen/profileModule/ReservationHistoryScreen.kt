@@ -1,4 +1,4 @@
-package com.example.assignment.screen.order
+package com.example.assignment.screen.profileModule
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -32,12 +32,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.example.assignment.model.FoodListing
 import com.example.assignment.model.Order
+import com.example.assignment.model.Restaurant
 import com.example.assignment.viewmodel.order.OrderViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -65,13 +68,6 @@ fun ReservationHistoryScreen(
             .padding(innerPadding)
             .padding(16.dp)
     ) {
-        Text(
-            text = "Reservation History",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
         Text(
             text = "Reservations that have been picked up",
             fontSize = 13.sp,
@@ -120,7 +116,7 @@ fun ReservationHistoryScreen(
                         color = MaterialTheme.colorScheme.onSecondary,
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(horizontal = 24.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -152,8 +148,8 @@ fun ReservationHistoryScreen(
 @Composable
 private fun ReservationHistoryCard(
     order: Order,
-    food: com.example.assignment.model.FoodListing?,
-    restaurant: com.example.assignment.model.Restaurant?,
+    food: FoodListing?,
+    restaurant: Restaurant?,
     onClick: () -> Unit
 ) {
     val completedDateText = rememberCompletedDate(order)

@@ -100,7 +100,6 @@ class FoodReminderReceiver : BroadcastReceiver() {
             "Food Expiration Reminders",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-
             description =
                 "Notifications for food approaching its expiry date"
         }
@@ -118,32 +117,16 @@ class FoodReminderReceiver : BroadcastReceiver() {
                 channelId
             )
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(
-                    "Food Expiration Reminder"
-                )
-                .setContentText(
-                    "$foodName expires in " +
-                            "$reminderDays day(s) on $expireDate."
-                )
+                .setContentTitle("Food Expiration Reminder")
+                .setContentText("$foodName expires in " + "$reminderDays day(s) on $expireDate.")
                 .setStyle(
-                    NotificationCompat.BigTextStyle()
-                        .bigText(
-                            "$foodName is approaching its " +
-                                    "expiry date. It will expire " +
-                                    "on $expireDate."
-                        )
+                    NotificationCompat.BigTextStyle().bigText("$foodName is approaching its " + "expiry date. It will expire " + "on $expireDate.")
                 )
-                .setPriority(
-                    NotificationCompat.PRIORITY_HIGH
-                )
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build()
 
-        NotificationManagerCompat
-            .from(context)
-            .notify(
-                foodName.hashCode(),
-                notification
-            )
+        NotificationManagerCompat.from(context)
+            .notify(foodName.hashCode(), notification)
     }
 }

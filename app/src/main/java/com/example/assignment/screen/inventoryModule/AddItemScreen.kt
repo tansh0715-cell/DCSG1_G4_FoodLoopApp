@@ -63,12 +63,14 @@ import kotlinx.datetime.toLocalDate
 import java.io.File
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDatePickerState
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.Instant
+import kotlinx.datetime.toLocalDate
 
 @Composable
 fun AddItemScreen(
@@ -84,7 +86,20 @@ fun AddItemScreen(
     var expireDate by remember { mutableStateOf("")}
     var showDatePicker by remember { mutableStateOf(false) }
 
-    val datePickerState = rememberDatePickerState()
+    val datePickerState = rememberDatePickerState(
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val todayStartLocal = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+                return utcTimeMillis >= todayStartLocal
+            }
+            override fun isSelectableYear(year: Int): Boolean {
+                return year >= java.time.LocalDate.now(java.time.ZoneId.systemDefault()).year
+            }
+        }
+    )
 
     var hasCameraPermission by remember {
         mutableStateOf(
