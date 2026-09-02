@@ -102,6 +102,15 @@ fun EditProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
+
+                    OutlinedTextField(
+                        value = viewModel.email,
+                        onValueChange = {},
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                    )
+
                     if (viewModel.role == "FOOD_SAVER") {
                         OutlinedTextField(
                             value = viewModel.name,

@@ -252,7 +252,7 @@ fun ProfileScreen(
                             )
                         }
                     } else {
-                        // Centered name only - gray email/phone removed per request
+
                         Text(
                             text = when {
                                 profileViewModel.role == "FOOD_PROVIDER" && profileViewModel.restaurantName.isNotBlank() -> profileViewModel.restaurantName
@@ -323,7 +323,7 @@ fun ProfileScreen(
                 // Money Saved
                 ElevatedCard(
                     modifier = Modifier.size(
-                        width = 120.dp,
+                        width = 130.dp,
                         height = 80.dp
                     ),
                     elevation = CardDefaults.cardElevation(5.dp)

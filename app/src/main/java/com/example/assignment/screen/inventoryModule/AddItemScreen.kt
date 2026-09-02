@@ -80,6 +80,7 @@ fun AddItemScreen(
 
     val context = LocalContext.current
     var foodName by remember { mutableStateOf("") }
+    var foodNameError by remember { mutableStateOf<String?>(null) }
     var reminderDays by remember { mutableStateOf(1) }
     val reminderOptions = listOf(1, 2, 3, 5, 7)
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -214,7 +215,21 @@ fun AddItemScreen(
             }
         }
 
-        FormField(label = "Name", value = foodName, onValueChange = {foodName = it}, placeholder = "Enter food name")
+        FormField(
+            label = "Name",
+            value = foodName,
+            onValueChange = {
+                if (it.length <= 30) {
+                    foodName = it
+                    foodNameError = null
+                } else {
+                    foodNameError = "Food name must be 30 characters or less"
+                }
+            },
+            placeholder = "Enter food name",
+            maxLength = 30,
+            errorMessage = foodNameError
+        )
 
         // Category Dropdown
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -345,6 +360,14 @@ fun AddItemScreen(
         }
 
         Button(onClick = {
+            if (foodName.isBlank()) {
+                foodNameError = "Food name is required"
+                return@Button
+            }
+            if (foodName.length > 30) {
+                foodNameError = "Food name must be 30 characters or less"
+                return@Button
+            }
             val imageBytes = imageUri?.let { uri ->
                 try {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -354,7 +377,7 @@ fun AddItemScreen(
             }
             vm.addItem(
                 context = context,
-                foodName = foodName,
+                foodName = foodName.trim(),
                 reminder_days = reminderDays,
                 expireDate = expireDate,
                 imageBytes = imageBytes,

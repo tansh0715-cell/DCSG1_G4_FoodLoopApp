@@ -30,8 +30,10 @@ import com.example.assignment.viewmodel.inventory.InventoryViewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
@@ -52,19 +54,39 @@ fun ItemDetailScreen(
     navController: NavController) {
 
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    val food = vm.foods.find { it.item_id == itemId }
     val context = LocalContext.current
-
     LaunchedEffect(Unit) {
         vm.loadInventory(context)
     }
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val food = vm.foods.find { it.item_id == itemId }
+
+
+
+
     if (food == null) {
-        Text(
-            text = "Food item not found",
-            modifier = Modifier.padding(innerPadding)
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator()
+                    Text(
+                        text = "Loading items...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
+            }
+        }
         return
     }
 
@@ -76,10 +98,7 @@ fun ItemDetailScreen(
         mutableStateOf(false)
     }
 
-    if (food == null) {
-        Text("Food not found")
-        return
-    }
+
 
     Column(
         modifier = Modifier
@@ -88,153 +107,161 @@ fun ItemDetailScreen(
             .padding(24.dp)
     ) {
 
-        if (!food.image_url.isNullOrBlank()) {
-            AsyncImage(
-                model = food.image_url,
-                contentDescription = "${food.name} image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No image")
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        // Food Name
-        Text(
-            text = food.name,
-            style = MaterialTheme.typography.headlineMedium
-        )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Expiry Date
-        Text(
-            text = "Expiry Date",
-            style = MaterialTheme.typography.labelLarge
-        )
-
-        Text(
-            text = food.expireDate.toString(),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Reminder Days
-        Text(
-            text = "Reminder Days",
-            style = MaterialTheme.typography.labelLarge
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
-            OutlinedTextField(
-                value = "$reminderDays days before",
-                onValueChange = {},
-                readOnly = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        reminderExpanded = true
-                    },
-                shape = RoundedCornerShape(12.dp),
-                enabled = false,
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor =
-                        MaterialTheme.colorScheme.onSurface,
-                    disabledBorderColor =
-                        MaterialTheme.colorScheme.outline,
-                    disabledContainerColor =
-                        MaterialTheme.colorScheme.background
-                ),
-                trailingIcon = {
-                    Text(
-                        text = "▼",
-                        fontSize = 10.sp,
-                        modifier = Modifier.padding(end = 12.dp)
+                if (!food.image_url.isNullOrBlank()) {
+                    AsyncImage(
+                        model = food.image_url,
+                        contentDescription = "${food.name} image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
                     )
-                }
-            )
-
-            // Make the whole TextField clickable
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable {
-                        reminderExpanded = true
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No image")
                     }
-            )
-
-            DropdownMenu(
-                expanded = reminderExpanded,
-                onDismissRequest = {
-                    reminderExpanded = false
                 }
-            ) {
-
-                listOf(1, 2, 3, 5, 7).forEach { option ->
-
-                    DropdownMenuItem(
-                        text = {
-                            Text("$option days before")
-                        },
-                        onClick = {
-
-                            reminderDays = option
-                            reminderExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ElevatedButton(
-            onClick = {
-
-                vm.updateReminder(
-                    context = context,
-                    food = food,
-                    newReminderDays = reminderDays,
-                    onSuccess = {
-                        navController.popBackStack()
-                    }
+                Spacer(Modifier.height(16.dp))
+                // Food Name
+                Text(
+                    text = food.name,
+                    style = MaterialTheme.typography.headlineMedium
                 )
 
-            },
-            shape = RoundedCornerShape(20.dp)
-        ) {
-            Text("Save Reminder")
-        }
+                Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
-        ElevatedButton(onClick = {
-            showDeleteDialog = true
-        },
-            shape = RoundedCornerShape(size = 20.dp),
-            colors = ButtonDefaults.elevatedButtonColors(
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError
-            )
-        ){
-            Icon(painter = painterResource(R.drawable.delete_24dp_e3e3e3_fill0_wght400_grad0_opsz24_1_), contentDescription = "add")
-            Text(text = "Delete Item", style = MaterialTheme.typography.labelLarge) }
-        }
+                // Expiry Date
+                Text(
+                    text = "Expiry Date",
+                    style = MaterialTheme.typography.labelLarge
+                )
+
+                Text(
+                    text = food.expireDate.toString(),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Reminder Days
+                Text(
+                    text = "Reminder Days",
+                    style = MaterialTheme.typography.labelLarge
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+
+                    OutlinedTextField(
+                        value = "$reminderDays days before",
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                reminderExpanded = true
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = false,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor =
+                                MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor =
+                                MaterialTheme.colorScheme.outline,
+                            disabledContainerColor =
+                                MaterialTheme.colorScheme.background
+                        ),
+                        trailingIcon = {
+                            Text(
+                                text = "▼",
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                        }
+                    )
+
+                    // Make the whole TextField clickable
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable {
+                                reminderExpanded = true
+                            }
+                    )
+
+                    DropdownMenu(
+                        expanded = reminderExpanded,
+                        onDismissRequest = {
+                            reminderExpanded = false
+                        }
+                    ) {
+
+                        listOf(1, 2, 3, 5, 7).forEach { option ->
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text("$option days before")
+                                },
+                                onClick = {
+
+                                    reminderDays = option
+                                    reminderExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ElevatedButton(
+                    onClick = {
+
+                        vm.updateReminder(
+                            context = context,
+                            food = food,
+                            newReminderDays = reminderDays,
+                            onSuccess = {
+                                navController.popBackStack()
+                            }
+                        )
+
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text("Save Reminder")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                ElevatedButton(
+                    onClick = {
+                        showDeleteDialog = true
+                    },
+                    shape = RoundedCornerShape(size = 20.dp),
+                    colors = ButtonDefaults.elevatedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.delete_24dp_e3e3e3_fill0_wght400_grad0_opsz24_1_),
+                        contentDescription = "add"
+                    )
+                    Text(text = "Delete Item", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = {

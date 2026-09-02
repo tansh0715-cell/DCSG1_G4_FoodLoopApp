@@ -25,7 +25,8 @@ fun FormField(
     singleLine: Boolean = true,
     minLines: Int = 1,
     errorMessage: String ?= null,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    maxLength: Int? = null
 ) {
     val isError = errorMessage != null
     val isValid = errorMessage == null && value.isNotBlank()
@@ -56,7 +57,10 @@ fun FormField(
         )
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = {
+                if (maxLength != null && it.length > maxLength) return@OutlinedTextField
+                onValueChange(it)
+            },
             placeholder = { Text(text = placeholder, color = MaterialTheme.colorScheme.onSecondary, style = MaterialTheme.typography.bodyLarge) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -72,7 +76,17 @@ fun FormField(
             ),
             singleLine = singleLine,
             minLines = minLines,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            supportingText = if (maxLength != null) {
+                {
+                    Text(
+                        text = "${value.length}/$maxLength",
+                        color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else null
         )
 
         if (isError) {

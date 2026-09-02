@@ -6,6 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.assignment.data.repository.AuthRepository
+import com.example.assignment.data.supabase.supabase
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.launch
 
 class ChangePasswordViewModel(
@@ -40,9 +43,23 @@ class ChangePasswordViewModel(
         successMessage = null
     }
 
+    // Used to disable button in UI when mismatch
+    val isConfirmMismatch: Boolean
+        get() = confirmPassword.isNotBlank() && newPassword != confirmPassword
+
+    val isFormValid: Boolean
+        get() = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank() && newPassword == confirmPassword && newPassword.length >= 6
+
     private fun validate(): Boolean {
         clearErrors()
         var valid = true
+        if (currentPassword.isBlank()) {
+            currentPasswordError = "Current password is required"
+            valid = false
+        } else if (currentPassword.length < 6) {
+            currentPasswordError = "Current password is too short"
+            valid = false
+        }
         if (newPassword.isBlank()) {
             newPasswordError = "New password is required"
             valid = false
@@ -57,11 +74,6 @@ class ChangePasswordViewModel(
             confirmPasswordError = "Passwords do not match"
             valid = false
         }
-        // currentPassword is optional for UX, but if filled verify length
-        if (currentPassword.isNotBlank() && currentPassword.length < 6) {
-            currentPasswordError = "Current password is too short"
-            valid = false
-        }
         return valid
     }
 
@@ -72,13 +84,27 @@ class ChangePasswordViewModel(
             errorMessage = null
             successMessage = null
             try {
-                // If current password provided, could verify via re-auth (optional)
-                // For now directly update to new password using Supabase session
+                // Re-auth: verify current password against Supabase
+                val email = supabase.auth.currentUserOrNull()?.email
+                    ?: throw Exception("Not logged in")
+                try {
+                    supabase.auth.signInWith(Email) {
+                        this.email = email
+                        this.password = currentPassword
+                    }
+                } catch (e: Exception) {
+                    currentPasswordError = "Current password is incorrect"
+                    errorMessage = "Current password is incorrect"
+                    return@launch
+                }
+                // Current verified, now update to new password
                 authRepository.updatePassword(newPassword)
                 successMessage = "Password updated successfully"
                 onSuccess()
             } catch (e: Exception) {
-                errorMessage = e.message ?: "Failed to update password"
+                if (currentPasswordError == null) {
+                    errorMessage = e.message ?: "Failed to update password"
+                }
             } finally {
                 isSaving = false
             }

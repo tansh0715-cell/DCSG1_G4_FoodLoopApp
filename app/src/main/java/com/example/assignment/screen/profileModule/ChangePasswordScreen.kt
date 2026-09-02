@@ -61,15 +61,15 @@ fun ChangePasswordScreen(
                 viewModel.currentPassword = it
                 if (viewModel.currentPasswordError != null) viewModel.clearErrors()
             },
-            label = { Text("Current Password (optional)") },
-            placeholder = { Text("Current password") },
+            label = { Text("Current Password *") },
+            placeholder = { Text("Current password (required)") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             isError = viewModel.currentPasswordError != null,
             supportingText = {
                 viewModel.currentPasswordError?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
-                }
+                } ?: Text(text = "Required to verify identity", color = MaterialTheme.colorScheme.onSecondary)
             },
             singleLine = true
         )
@@ -99,13 +99,15 @@ fun ChangePasswordScreen(
                 viewModel.confirmPassword = it
                 if (viewModel.confirmPasswordError != null) viewModel.clearErrors()
             },
-            label = { Text("Confirm New Password") },
+            label = { Text("Confirm New Password *") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            isError = viewModel.confirmPasswordError != null,
+            isError = viewModel.confirmPasswordError != null || viewModel.isConfirmMismatch,
             supportingText = {
-                viewModel.confirmPasswordError?.let {
-                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                when {
+                    viewModel.confirmPasswordError != null -> Text(text = viewModel.confirmPasswordError!!, color = MaterialTheme.colorScheme.error)
+                    viewModel.isConfirmMismatch -> Text(text = "Passwords do not match", color = MaterialTheme.colorScheme.error)
+                    else -> {}
                 }
             },
             singleLine = true
@@ -127,7 +129,7 @@ fun ChangePasswordScreen(
                     navController.popBackStack()
                 }
             },
-            enabled = !viewModel.isSaving,
+            enabled = !viewModel.isSaving && !viewModel.isConfirmMismatch && viewModel.newPassword.isNotBlank() && viewModel.confirmPassword.isNotBlank() && viewModel.currentPassword.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (viewModel.isSaving) {
