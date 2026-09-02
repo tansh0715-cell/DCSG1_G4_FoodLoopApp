@@ -146,6 +146,10 @@ private fun NotificationHistoryCard(
             R.drawable.production_quantity_limits_24dp_cccccc_fill0_wght400_grad0_opsz24 to
                     MaterialTheme.colorScheme.error
 
+        "Order Canceled" ->
+            R.drawable.cancel_24dp_cccccc_fill0_wght400_grad0_opsz24 to
+                    MaterialTheme.colorScheme.error
+
         else ->
             R.drawable.ic_notification to
                     MaterialTheme.colorScheme.primary

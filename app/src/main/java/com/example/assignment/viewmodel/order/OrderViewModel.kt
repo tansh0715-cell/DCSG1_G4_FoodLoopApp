@@ -215,22 +215,30 @@ class OrderViewModel(
         }
     }
 
+    //ADD
     fun loadProviderOrders() {
         viewModelScope.launch {
             _isLoading.value = true
 
             try {
-
                 val loadedOrders =
                     repository.getProviderOrders(
                         currentUserId
                     )
 
-                _orders.value = loadedOrders
+                val activeOrders = loadedOrders.filter { order ->
 
-                // Load food information for each order
+                    order.status.equals(
+                        "PENDING", ignoreCase = true
+                    ) && !order.isPickupTimeEnded()
+                }
+
+                _orders.value = activeOrders
+
+                // Load food and restaurant information
+                // only for active orders.
                 loadConsumerRelatedData(
-                    loadedOrders
+                    activeOrders
                 )
 
             } catch (e: Exception) {

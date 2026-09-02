@@ -7,6 +7,7 @@ import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.supabase.supabase
+import com.example.assignment.model.isPickupTimeEnded
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.first
 import java.time.Duration
@@ -104,52 +105,44 @@ class NotificationWorker(
 
             // 2. Pickup time has passed
             if (!order.status.equals(
-                    "COMPLETED", ignoreCase = true
-                )
+                    "PENDING", ignoreCase = true
+                ) &&
+                order.isPickupTimeEnded()
             ) {
 
-                if (isPickupTimePassed(
-                        order.pickupTime
+                val eventId = "pickup-passed-${order.orderCode}"
+
+                if (!eventStore.hasBeenShown(eventId)) {
+
+                    NotificationHelper.showNotification(
+                        context = context,
+                        notificationId =
+                            eventId.hashCode(),
+
+                        title =
+                            "Pickup Time Passed",
+
+                        message =
+                            "Order #${order.orderCode} was not collected. Refund: RM ${
+                                String.format(
+                                    "%.2f",
+                                    order.totalPrice
+                                )
+                            }",
+
+                        eventId =
+                            eventId,
+
+                        ownerId =
+                            order.consumerId,
+
+                        role =
+                            "FOOD_SAVER"
                     )
-                ) {
 
-                    val eventId = "pickup-passed-${order.orderCode}"
-
-                    if (!eventStore.hasBeenShown(
-                            eventId
-                        )
-                    ) {
-
-                        NotificationHelper.showNotification(
-                            context = context,
-                            notificationId =
-                                eventId.hashCode(),
-
-                            title =
-                                "Pickup Time Passed",
-
-                            message =
-                                "Order #${order.orderCode} was not collected. Refund: RM ${
-                                    String.format(
-                                        "%.2f",
-                                        order.totalPrice
-                                    )
-                                }",
-
-                            eventId =
-                                eventId,
-
-                            ownerId =
-                                order.consumerId,
-
-                            role =
-                                "FOOD_SAVER"
-                        )
-
-                        eventStore.markAsShown(
-                            eventId
-                        )
-                    }
+                    eventStore.markAsShown(
+                        eventId
+                    )
                 }
             }
         }
@@ -166,6 +159,59 @@ class NotificationWorker(
         val orders = orderRepository.getProviderOrders(
             userId
         )
+        // 2. Pickup time has passed
+        for (order in orders) {
+
+            if (
+                order.status.equals(
+                    "PENDING",
+                    ignoreCase = true
+                ) &&
+                order.isPickupTimeEnded()
+            ) {
+
+                val eventId =
+                    "provider-order-canceled-${order.orderCode}"
+
+                if (
+                    !eventStore.hasBeenShown(
+                        eventId
+                    )
+                ) {
+
+                    val posted =
+                        NotificationHelper.showNotification(
+
+                            context = context,
+
+                            notificationId =
+                                eventId.hashCode(),
+
+                            title =
+                                "Order Canceled",
+
+                            message =
+                                "Order #${order.orderCode} was canceled because the pickup time expired.",
+
+                            eventId =
+                                eventId,
+
+                            ownerId =
+                                userId,
+
+                            role =
+                                "FOOD_PROVIDER"
+                        )
+
+                    if (posted) {
+
+                        eventStore.markAsShown(
+                            eventId
+                        )
+                    }
+                }
+            }
+        }
 
         for (order in orders) {
 
@@ -263,53 +309,6 @@ class NotificationWorker(
                     }
                 }
             }
-        }
-    }
-
-    private fun isPickupTimePassed(
-        pickupTime: String
-    ): Boolean {
-
-        if (pickupTime.isBlank()) {
-            return false
-        }
-
-        return try {
-
-            val parts = pickupTime.split(" - ")
-
-            if (parts.size != 2) {
-                return false
-            }
-
-            val formatter = DateTimeFormatter.ofPattern(
-                "h:mm a", Locale.ENGLISH
-            )
-
-            val start = LocalTime.parse(
-                parts[0].trim(), formatter
-            )
-
-            val end = LocalTime.parse(
-                parts[1].trim(), formatter
-            )
-
-            val now = LocalTime.now()
-
-            if (!end.isBefore(start)) {
-
-                // 10 AM - 2 PM
-                now.isAfter(end)
-
-            } else {
-
-                // 12 PM - 1 AM
-                now.isAfter(end) && now.isBefore(start)
-            }
-
-        } catch (e: Exception) {
-
-            false
         }
     }
 }

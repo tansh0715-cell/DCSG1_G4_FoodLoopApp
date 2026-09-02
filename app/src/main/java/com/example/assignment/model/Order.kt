@@ -2,6 +2,8 @@ package com.example.assignment.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -53,37 +55,41 @@ fun Order.isPickupTimeEnded(): Boolean {
         }
 
         val formatter = DateTimeFormatter.ofPattern(
-            "h:mm a",
-            Locale.ENGLISH
+            "h:mm a", Locale.ENGLISH
         )
 
-        val start = LocalTime.parse(
-            parts[0].trim(),
-            formatter
+        val startTime = LocalTime.parse(
+            parts[0].trim(), formatter
         )
 
-        val end = LocalTime.parse(
-            parts[1].trim(),
-            formatter
+        val endTime = LocalTime.parse(
+            parts[1].trim(), formatter
         )
 
-        val now = LocalTime.now()
+        val today = LocalDate.now()
 
-        if (!end.isBefore(start)) {
+        var endDate = today
 
-            // Example:
-            // 10:00 AM - 2:00 PM
-            now.isAfter(end)
+        /*
+         * If end time is earlier than start time,
+         * the pickup slot crosses midnight.
+         * End time belongs to the next day.
+         */
 
-        } else {
-
-            // Cross midnight
-            // Example:
-            // 12:00 PM - 1:00 AM
-            now.isAfter(end) && now.isBefore(start)
+        if (endTime.isBefore(startTime)) {
+            endDate = today.plusDays(1)
         }
 
+        val pickupEndDateTime = LocalDateTime.of(
+            endDate, endTime
+        )
+
+        val now = LocalDateTime.now()
+        now.isAfter(pickupEndDateTime)
+
     } catch (e: Exception) {
+
+        e.printStackTrace()
 
         false
     }
