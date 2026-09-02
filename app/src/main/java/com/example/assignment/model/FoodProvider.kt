@@ -1,6 +1,7 @@
 package com.example.assignment.model
 
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,4 +12,6 @@ data class FoodProvider (
     val phone: String,
     val address: String,
     val licensePhotoUri: String,
+    @SerialName("restaurant_picture")
+    val restaurantPicture: String? = null
 )

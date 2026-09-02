@@ -1,6 +1,11 @@
 package com.example.assignment.screen.profileModule
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,8 +25,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -141,6 +154,7 @@ fun EditProfileScreen(
                             minLines = 2
                         )
 
+                        // License Photo display (read-only)
                         if (viewModel.licensePhotoUri.isNotBlank()) {
                             Text(
                                 text = "License Photo (read-only)",
@@ -149,11 +163,61 @@ fun EditProfileScreen(
                             AsyncImage(
                                 model = viewModel.licensePhotoUri,
                                 contentDescription = "License Photo",
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(180.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
                             )
                         }
+
+                        // Restaurant Picture - editable to restaurant-images bucket
+                        var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+                        val imagePicker = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.GetContent()
+                        ) { uri: Uri? ->
+                            uri?.let {
+                                try {
+                                    context.contentResolver.openInputStream(it)?.use { input ->
+                                        val bytes = input.readBytes()
+                                        viewModel.setPendingRestaurantImage(bytes)
+                                        selectedImageUri = it
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
+
+                        Text(
+                            text = "Restaurant Picture",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                .clickable { imagePicker.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val displayModel = selectedImageUri ?: viewModel.restaurantPicture
+                            if (displayModel != null) {
+                                AsyncImage(
+                                    model = displayModel,
+                                    contentDescription = "Restaurant Picture",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    text = "Tap to upload restaurant picture",
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+
                     }
 
                     OutlinedTextField(
