@@ -22,10 +22,35 @@ class LoginViewModel(
     var password by mutableStateOf("")
     var isLoading by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
+    var emailError by mutableStateOf<String?>(null)
+        private set
+    var passwordError by mutableStateOf<String?>(null)
+        private set
+    fun clearEmailError() { emailError = null }
+    fun clearPasswordError() { passwordError = null }
+    fun clearMessage() { message = null }
 
-    fun login(onSuccess: (String) -> Unit) {
-        if (email.isBlank() || password.isBlank()) {
-            message = "Please fill in all fields"
+    fun login(
+        onSuccess: (String) -> Unit
+    ) {
+        emailError = null
+        passwordError = null
+        message = null
+        var valid = true
+
+        if (email.isBlank()) {
+            emailError = "Please enter your email address"
+            valid = false
+        }
+
+        if (password.isBlank()) {
+            passwordError = "Please enter your password"
+            valid = false
+        }
+
+
+        // Stop if validation fails
+        if (!valid) {
             return
         }
 
@@ -36,24 +61,26 @@ class LoginViewModel(
                     email = email.trim().lowercase(),
                     password = password
                 )
-                val userId = supabase.auth.currentUserOrNull()?.id
-                    ?: throw Exception("User ID not found after login")
-                userPreferencesManager.saveUserData(
-                    accountType,
-                    userId
-                )
+
+                val userId = supabase.auth.currentUserOrNull()?.id ?: throw Exception("User ID not found after login")
+
+                userPreferencesManager.saveUserData(accountType, userId)
                 when (accountType) {
                     "FOOD_SAVER" -> { onSuccess("FOOD_SAVER") }
                     "FOOD_PROVIDER" -> { onSuccess("FOOD_PROVIDER") }
                     else -> { message = "Account type is not found" }
                 }
-
             } catch (e: Exception) {
-                message = when (e.message) {
-                    "EMAIL_NOT_VERIFIED" ->
-                        "Your email hasn't been verified yet. Please check your inbox."
-                    else ->
-                        "Login failed. Please check your email or password."
+                when {
+                    e.message?.contains("EMAIL_NOT_VERIFIED", ignoreCase = true) == true -> {
+                        message = "Your email hasn't been verified yet."
+                    }
+                    e.message?.contains("Invalid login credentials", ignoreCase = true ) == true -> {
+                        passwordError = "Invalid email or password"
+                    }
+                    else -> {
+                        message = "Login failed. Please try again."
+                    }
                 }
             } finally {
                 isLoading = false
@@ -61,22 +88,18 @@ class LoginViewModel(
         }
     }
 
-    fun clearMessage() {
-        message = null
-    }
 
+    // VIEWMODEL FACTORY
     companion object {
-
         fun Factory(
             authRepository: AuthRepository,
             userPreferencesManager: UserPreferencesManager
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-
                     LoginViewModel(
-                        authRepository,
-                        userPreferencesManager
+                        authRepository = authRepository,
+                        userPreferencesManager = userPreferencesManager
                     )
                 }
             }

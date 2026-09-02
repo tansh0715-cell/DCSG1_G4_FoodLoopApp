@@ -25,6 +25,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +37,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -67,27 +73,24 @@ fun RegisterScreen(
         )
 ) {
     val context = LocalContext.current
-    val locationTracker = remember {
-        LocationTracker(
-            context.applicationContext
-        )
-    }
-    val locationPermissionLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            val granted =
-                permissions[ Manifest.permission.ACCESS_FINE_LOCATION ] == true ||
-                        permissions[ Manifest.permission.ACCESS_COARSE_LOCATION ] == true
-            if (granted) {
-                locationTracker.start { location ->
-                    viewModel.setProviderLocation(
-                        latitude = location.latitude,
-                        longitude = location.longitude
-                    )
-                }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    val locationTracker = remember { LocationTracker(context.applicationContext) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted =
+            permissions[ Manifest.permission.ACCESS_FINE_LOCATION ] == true ||
+                    permissions[ Manifest.permission.ACCESS_COARSE_LOCATION ] == true
+        if (granted) {
+            locationTracker.start { location ->
+                viewModel.setProviderLocation(
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
             }
         }
+    }
 
     DisposableEffect(accountType) {
         if (accountType == "FOOD_PROVIDER") {
@@ -117,21 +120,17 @@ fun RegisterScreen(
                 )
             }
         }
-
-        onDispose {
-            locationTracker.stop()
-        }
+        onDispose { locationTracker.stop() }
     }
 
-    val photoPickerLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { uri ->
-            viewModel.licensePhotoUri = uri
-            if (uri != null) {
-                viewModel.clearLicensePhotoError()
-            }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        viewModel.licensePhotoUri = uri
+        if (uri != null) {
+            viewModel.clearLicensePhotoError()
         }
+    }
 
     // General Message
     LaunchedEffect(viewModel.message) {
@@ -297,7 +296,34 @@ fun RegisterScreen(
                     viewModel.clearPasswordError()
                 },
                 label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation =
+                    if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            passwordVisible = !passwordVisible
+                        }
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (passwordVisible) {
+                                    Icons.Default.VisibilityOff
+                                } else {
+                                    Icons.Default.Visibility
+                                },
+                            contentDescription =
+                                if (passwordVisible) {
+                                    "Hide password"
+                                } else {
+                                    "Show password"
+                                }
+                        )
+                    }
+                },
                 isError = viewModel.passwordError != null,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -306,7 +332,6 @@ fun RegisterScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-
             viewModel.passwordError?.let {
                 Text(
                     text = it,
@@ -324,7 +349,35 @@ fun RegisterScreen(
                     viewModel.clearConfirmPasswordError()
                 },
                 label = { Text("Confirm Password") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation =
+                    if (confirmPasswordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            confirmPasswordVisible =
+                                !confirmPasswordVisible
+                        }
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (confirmPasswordVisible) {
+                                    Icons.Default.VisibilityOff
+                                } else {
+                                    Icons.Default.Visibility
+                                },
+                            contentDescription =
+                                if (confirmPasswordVisible) {
+                                    "Hide confirm password"
+                                } else {
+                                    "Show confirm password"
+                                }
+                        )
+                    }
+                },
                 isError = viewModel.confirmPasswordError != null,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -496,13 +549,41 @@ fun RegisterScreen(
                     viewModel.clearPasswordError()
                 },
                 label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation =
+                    if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            passwordVisible = !passwordVisible
+                        }
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (passwordVisible) {
+                                    Icons.Default.VisibilityOff
+                                } else {
+                                    Icons.Default.Visibility
+                                },
+                            contentDescription =
+                                if (passwordVisible) {
+                                    "Hide password"
+                                } else {
+                                    "Show password"
+                                }
+                        )
+                    }
+                },
                 isError = viewModel.passwordError != null,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Black,
                     errorTextColor = Color.Black
                 ),
+
                 modifier = Modifier.fillMaxWidth()
             )
             viewModel.passwordError?.let {
@@ -523,7 +604,35 @@ fun RegisterScreen(
                     viewModel.clearConfirmPasswordError()
                 },
                 label = { Text("Confirm Password") },
-                visualTransformation =PasswordVisualTransformation(),
+                visualTransformation =
+                    if (confirmPasswordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            confirmPasswordVisible =
+                                !confirmPasswordVisible
+                        }
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (confirmPasswordVisible) {
+                                    Icons.Default.VisibilityOff
+                                } else {
+                                    Icons.Default.Visibility
+                                },
+                            contentDescription =
+                                if (confirmPasswordVisible) {
+                                    "Hide confirm password"
+                                } else {
+                                    "Show confirm password"
+                                }
+                        )
+                    }
+                },
                 isError = viewModel.confirmPasswordError != null,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -532,7 +641,6 @@ fun RegisterScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-
             viewModel.confirmPasswordError?.let {
                 Text(
                     text = it,

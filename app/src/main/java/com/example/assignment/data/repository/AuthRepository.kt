@@ -25,7 +25,7 @@ class AuthRepository {
 
         supabase.auth.signUpWith(
             Email,
-            redirectUrl = "com.example.assignment://login-callback"
+            redirectUrl = "com.example.assignment://auth-callback"
         ) {
             this.email = cleanEmail
             this.password = password
@@ -56,7 +56,7 @@ class AuthRepository {
 
         supabase.auth.signUpWith(
             Email,
-            redirectUrl = "com.example.assignment://login-callback"
+            redirectUrl = "com.example.assignment://auth-callback"
         ) {
             this.email = cleanEmail
             this.password = password
@@ -187,10 +187,9 @@ class AuthRepository {
         email: String
     ) {
         val cleanEmail = email.trim().lowercase()
-
         supabase.auth.resetPasswordForEmail(
             email = cleanEmail,
-            redirectUrl = "com.example.assignment://reset-callback"
+            redirectUrl = "com.example.assignment://auth-callback"
         )
     }
 

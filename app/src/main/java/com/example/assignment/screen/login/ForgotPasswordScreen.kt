@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,13 +43,19 @@ fun ForgotPasswordScreen(
 ) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // GENERAL MESSAGE TOAST
     LaunchedEffect(message) {
         message?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_SHORT
+            ).show()
             message = null
         }
     }
@@ -55,7 +64,6 @@ fun ForgotPasswordScreen(
         val regex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
         return email.matches(regex)
     }
-
 
     Column(
         modifier = Modifier
@@ -70,7 +78,7 @@ fun ForgotPasswordScreen(
         ) {
             IconButton(
                 onClick = onBackToLogin,
-                modifier = Modifier.align(Alignment.CenterStart)
+                modifier =Modifier.align(Alignment.CenterStart)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -81,8 +89,7 @@ fun ForgotPasswordScreen(
 
             Text(
                 text = "Forgot Password",
-                style = MaterialTheme.typography.headlineMedium
-                    .copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.align(Alignment.Center),
                 textAlign = TextAlign.Center
             )
@@ -96,25 +103,46 @@ fun ForgotPasswordScreen(
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                emailError = null
+            },
             label = { Text("Email") },
+            singleLine = true,
+            isError = emailError != null,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                errorTextColor = Color.Black
+                ),
             modifier = Modifier.fillMaxWidth()
         )
-
+        emailError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
+        // SEND RESET LINK
         Button(
             onClick = {
+                emailError = null
                 if (email.isBlank()) {
-                    message = "Please enter your email"
+                    emailError = "Please enter your email"
+                    return@Button
+                }
+                if (!isValidEmail(email.trim())) {
+                    emailError ="Please enter a valid email address"
                     return@Button
                 }
 
-                if (!isValidEmail(email)) {
-                    message = "Please enter a valid email address"
-                    return@Button
-                }
-
+                // SEND RESET LINK
                 scope.launch {
                     isLoading = true
                     try {
@@ -130,7 +158,15 @@ fun ForgotPasswordScreen(
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Send Reset Link")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Send Reset Link")
+            }
         }
     }
 }

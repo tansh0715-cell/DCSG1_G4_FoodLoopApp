@@ -11,7 +11,8 @@ val supabase = createSupabaseClient (
 ){
     install(Auth) {
         scheme = "com.example.assignment"
-        host = "login-callback"
+        host = "auth-callback"
+
     }
     install(Postgrest)
     install(Storage)
