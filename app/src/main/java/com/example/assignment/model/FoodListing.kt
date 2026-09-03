@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.Color
 import com.example.assignment.ui.theme.PrimaryGreen
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -33,6 +35,9 @@ data class FoodListing(
     val pickupTime: String,
     val price: Double, //final selling price after discount
 
+    @SerialName("pickup_date")
+    val pickupDate: String,
+
     @SerialName("original_price")
     val originalPrice: Double,
 
@@ -50,36 +55,54 @@ data class FoodListing(
 
     //Return true when the pickup time range has already ended
     fun isPickupTimeEnded(): Boolean {
-        if(pickupTime.isBlank()){
+
+        if (pickupDate.isBlank() || pickupTime.isBlank()) {
             return false
         }
+
         return try {
+
             val parts = pickupTime.split(" - ")
-            if (parts.size != 2){
+
+            if (parts.size != 2) {
                 return false
             }
+
             val formatter = DateTimeFormatter.ofPattern(
                 "h:mm a",
                 Locale.ENGLISH
             )
+
             val start = LocalTime.parse(
                 parts[0].trim(),
                 formatter
             )
+
             val end = LocalTime.parse(
                 parts[1].trim(),
                 formatter
             )
-            val now = LocalTime.now()
 
-            return if (!end.isBefore(start)) {
-                // Normal same-day range
-                now.isAfter(end)
-            } else {
-                // Cross-midnight range
-                now.isAfter(end) && now.isBefore(start)
-            }
-        } catch (e: Exception){
+            val pickupStartDate = LocalDate.parse(
+                pickupDate
+            )
+
+            val pickupEndDate =
+                if (end.isBefore(start)) {
+                    pickupStartDate.plusDays(1)
+                } else {
+                    pickupStartDate
+                }
+
+            val pickupEndDateTime = LocalDateTime.of(
+                pickupEndDate,
+                end
+            )
+
+            LocalDateTime.now()
+                .isAfter(pickupEndDateTime)
+
+        } catch (e: Exception) {
             false
         }
     }

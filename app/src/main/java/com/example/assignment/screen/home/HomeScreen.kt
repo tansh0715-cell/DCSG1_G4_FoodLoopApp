@@ -150,6 +150,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
 
         viewModel.loadAllFoods()
+        kotlinx.coroutines.delay(60_000)
 
         viewModel.loadConsumerNotificationState()
 

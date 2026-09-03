@@ -32,6 +32,9 @@ class AddFoodViewModel(
         private set
     //other classes can read editingFoodId but only AddFoodViewModel can change it
 
+    // Keep the original system-generated pickup date when editing
+    private var editingPickupDate: String? = null
+
     //record UI state
     //all form values and validation errors are stored inside AddFoodUiState
     private val _uiState = MutableStateFlow(AddFoodUiState())
@@ -207,6 +210,9 @@ class AddFoodViewModel(
                         return@launch
                     }
 
+                    // Keep the original system-generated pickup date
+                    editingPickupDate = food.pickupDate
+
                     _uiState.update {
                         it.copy(
                             foodName = food.name,
@@ -318,7 +324,50 @@ class AddFoodViewModel(
         }
     }
 
-    //ADD
+    private fun calculatePickupDate(
+        pickupTime: String,
+        now: LocalDateTime = LocalDateTime.now()
+    ): String? {
+
+        return try {
+            val parts = pickupTime.split(" - ")
+
+            if (parts.size != 2) {
+                return null
+            }
+
+            val formatter = DateTimeFormatter.ofPattern(
+                "hh:mm a",
+                Locale.ENGLISH
+            )
+
+            val start = LocalTime.parse(
+                parts[0].trim(),
+                formatter
+            )
+
+            val today = now.toLocalDate()
+            val currentTime = now.toLocalTime()
+
+            /*
+             * The user does NOT enter the pickup date.
+             *
+             * The system determines it from the current
+             * date and the selected pickup start time.
+             */
+            val pickupDate =
+                if (start.isAfter(currentTime)) {
+                    today
+                } else {
+                    today.plusDays(1)
+                }
+
+            pickupDate.toString()
+
+        } catch (e: Exception) {
+            null
+        }
+    }
     private fun validatePickupTime(
         pickupTime: String
     ): String? {
@@ -484,6 +533,37 @@ class AddFoodViewModel(
             return
         }
 
+        val pickupDate: String
+
+        if (editingFoodId == null) {
+
+            // NEW FOOD
+            // The system automatically determines the pickup date.
+            pickupDate = calculatePickupDate(
+                currentState.pickupTime
+            ) ?: run {
+                _uiEvent.trySend(
+                    AddFoodEvent.ShowToast(
+                        "Invalid pickup date"
+                    )
+                )
+                return
+            }
+
+        } else {
+
+            // EDIT FOOD
+            // Keep the original system-generated pickup date.
+            pickupDate = editingPickupDate ?: run {
+                _uiEvent.trySend(
+                    AddFoodEvent.ShowToast(
+                        "Pickup date is missing"
+                    )
+                )
+                return
+            }
+        }
+
         // Everything that calls suspend functions goes inside here
         viewModelScope.launch {
             try {
@@ -524,6 +604,7 @@ class AddFoodViewModel(
                         .trim()
                         .ifBlank { null },
                     quantity = qtyInt,
+                    pickupDate = pickupDate,
                     pickupTime = currentState.pickupTime,
                     originalPrice = originalPrice,
                     discountPercentage = discount,
