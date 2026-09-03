@@ -165,7 +165,7 @@ class FoodReminderReceiver : BroadcastReceiver() {
                 .setContentText("$foodName expired on $expireDate. Please discard or handle it.")
                 .setStyle(
                     NotificationCompat.BigTextStyle().bigText(
-                        "$foodName has expired on $expireDate. Please discard it or handle it promptly."
+                        "$foodName has expired on $expireDate. Please discard it or handle it"
                     )
                 )
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

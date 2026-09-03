@@ -117,10 +117,17 @@ object FoodReminderScheduler {
 
         val expiry = LocalDate.parse(expireDate)
 
+        val now = java.time.LocalDateTime.now()
+
         // Run shortly after midnight on expiry date
-        val expiryDateTime = expiry.atTime(
+        var expiryDateTime = expiry.atTime(
             LocalTime.of(0, 1)
         )
+
+
+        if (expiry == LocalDate.now() && expiryDateTime.isBefore(now)) {
+            expiryDateTime = now.plusMinutes(1)
+        }
 
         val expiryTimeMillis = expiryDateTime
             .atZone(ZoneId.systemDefault())
@@ -148,8 +155,6 @@ object FoodReminderScheduler {
         /*
          * Different request code from the reminder alarm.
          *
-         * We don't want the expiry alarm to replace
-         * the reminder alarm.
          */
         val pendingIntent = PendingIntent.getBroadcast(
             context,
