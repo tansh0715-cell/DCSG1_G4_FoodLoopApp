@@ -36,9 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,7 +55,6 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.assignment.R
 import com.example.assignment.components.FoodCard
-import com.example.assignment.components.NotificationPopup
 import com.example.assignment.components.ProviderFoodCard
 import com.example.assignment.components.StatCard
 import com.example.assignment.location.LocationTracker

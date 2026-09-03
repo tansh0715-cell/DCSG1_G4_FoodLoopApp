@@ -12,9 +12,6 @@ import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.first
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class NotificationWorker(
     appContext: Context, workerParams: WorkerParameters
