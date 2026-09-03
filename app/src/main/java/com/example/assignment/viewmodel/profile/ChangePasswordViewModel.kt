@@ -70,6 +70,9 @@ class ChangePasswordViewModel(
         } else if (newPassword != confirmPassword) {
             confirmPasswordError = "Passwords do not match"
             valid = false
+        } else if (newPassword == currentPassword) {
+            confirmPasswordError = "New password must be different from current password"
+            valid = false
         }
         return valid
     }
