@@ -61,16 +61,16 @@ class OrderViewModel(
 
     // Reservation History (picked up / completed)
     private val _historyOrders = MutableStateFlow<List<Order>>(emptyList())
-    val historyOrders: StateFlow<List<Order>> = _historyOrders.asStateFlow()
+    val historyOrders = _historyOrders.asStateFlow()
 
     private val _historyFoodByOrderId = MutableStateFlow<Map<String, FoodListing>>(emptyMap())
-    val historyFoodByOrderId: StateFlow<Map<String, FoodListing>> = _historyFoodByOrderId.asStateFlow()
+    val historyFoodByOrderId = _historyFoodByOrderId.asStateFlow()
 
     private val _historyRestaurantByOrderId = MutableStateFlow<Map<String, Restaurant>>(emptyMap())
-    val historyRestaurantByOrderId: StateFlow<Map<String, Restaurant>> = _historyRestaurantByOrderId.asStateFlow()
+    val historyRestaurantByOrderId = _historyRestaurantByOrderId.asStateFlow()
 
     private val _isHistoryLoading = MutableStateFlow(false)
-    val isHistoryLoading: StateFlow<Boolean> = _isHistoryLoading.asStateFlow()
+    val isHistoryLoading = _isHistoryLoading.asStateFlow()
 
     fun loadConsumerOrders() {
         viewModelScope.launch {
@@ -321,7 +321,7 @@ class OrderViewModel(
         viewModelScope.launch {
             _isHistoryLoading.value = true
             try {
-                // Fetch both consumer (all) and provider orders, then filter COMPLETED
+
                 val completedOrders = mutableListOf<Order>()
                 var fetchError: Exception? = null
 
@@ -335,7 +335,7 @@ class OrderViewModel(
                     fetchError = e
                 }
 
-                // Try provider orders as well (handles provider role or mixed)
+                // Provider Order
                 try {
                     val providerOrders = repository.getProviderOrders(currentUserId)
                     val providerCompleted = providerOrders.filter {
@@ -348,18 +348,10 @@ class OrderViewModel(
                     if (completedOrders.isEmpty()) fetchError = e
                 }
 
-                // Fallback: if both RPCs failed or empty, try getConsumerOrders and filter
-                if (completedOrders.isEmpty() && fetchError != null) {
-                    try {
-                        val consumerPending = repository.getConsumerOrders(currentUserId)
-                        completedOrders += consumerPending.filter {
-                            it.status.equals("COMPLETED", ignoreCase = true)
-                        }
-                    } catch (_: Exception) {}
-                }
+
 
                 // Sort by completedAt / createdAt descending (most recent first)
-                val sorted = completedOrders.sortedByDescending { it.completedAt ?: it.createdAt }
+                val sorted = completedOrders.sortedByDescending { it.completedAt }
 
                 _historyOrders.value = sorted
 
@@ -388,5 +380,4 @@ class OrderViewModel(
         }
     }
 
-    fun refreshReservationHistory() = loadReservationHistory()
 }
