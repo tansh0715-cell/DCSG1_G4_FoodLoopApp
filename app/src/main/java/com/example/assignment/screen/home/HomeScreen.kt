@@ -50,6 +50,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -65,6 +68,7 @@ import com.example.assignment.ui.theme.SafeColor
 import com.example.assignment.ui.theme.SecondaryGreen
 import com.example.assignment.viewmodel.home.HomeViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Composable
 fun HomeScreen(
@@ -75,6 +79,23 @@ fun HomeScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+
+        val observer = LifecycleEventObserver { _, event ->
+
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadConsumerNotificationState()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val locationTracker = remember {
         LocationTracker(
@@ -147,14 +168,8 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
 
         viewModel.loadAllFoods()
-        kotlinx.coroutines.delay(60_000)
 
         viewModel.loadConsumerNotificationState()
-
-        // Immediately check system notifications
-        NotificationWorkerScheduler.runNow(
-            context
-        )
     }
 
     Box(
@@ -495,12 +510,9 @@ fun ProviderHomeScreen(
 
         if (providerId.isNotBlank()) {
 
-            // Immediately check notifications
-            NotificationWorkerScheduler.runNow(
-                context
-            )
+            NotificationWorkerScheduler.runNow(context)
 
-            while (true) {
+            while (isActive) {
 
                 viewModel.loadProviderHome(
                     providerId
@@ -618,7 +630,9 @@ fun ProviderHomeScreen(
                             IconButton(
                                 onClick = {
                                     // Mark notification as viewed
-                                    viewModel.markProviderNotificationsViewed()
+                                    viewModel.markProviderNotificationsViewed(
+                                        providerId = providerId
+                                    )
 
                                     navController.navigate(
                                         "PROVIDER_NOTIFICATIONS"

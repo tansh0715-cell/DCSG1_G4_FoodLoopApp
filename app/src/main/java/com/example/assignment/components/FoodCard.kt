@@ -196,7 +196,9 @@ fun ProviderFoodCard(
     // Status
     val isSoldOut = food.status == FoodStatus.SOLD_OUT
     val isExpired = food.isPickupTimeEnded()
-    val canManage = true
+
+    //Provider can only manage/delete a foodlisting after pickup time has ended
+    val canManage = isExpired
 
     Card(
         modifier = Modifier.fillMaxWidth(),

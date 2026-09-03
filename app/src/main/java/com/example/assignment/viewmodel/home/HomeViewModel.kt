@@ -1,5 +1,6 @@
 package com.example.assignment.viewmodel.home
 
+import android.content.Context
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -57,10 +59,17 @@ class HomeViewModel(
     private val foodRepository: FoodRepository,
     private val restaurantRepository: RestaurantRepository,
     private val orderRepository: OrderRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val context: Context
 ): ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val notificationPrefs =
+        context.getSharedPreferences(
+            "consumer_notification_state",
+            Context.MODE_PRIVATE
+        )
 
     // Store all food fetched from Supabase
     // The UI only receives the filtered result through uiState
@@ -103,56 +112,119 @@ class HomeViewModel(
                     )
                 val reservationCount = providerOrders.size
 
-                val now = java.time.Instant.now()
+                val now = Instant.now()
                 val localNow = LocalTime.now()
 
+                // Get provider notifications that have already been viewed
+                val viewedProviderNotifications =
+                    getViewedProviderNotifications(providerId)
+
+                // Store IDs of notifications that currently exist
+                val currentProviderNotificationIds =
+                    mutableSetOf<String>()
+
+                providerOrders.forEach { order ->
+
+                    // -------------------------------
+                    // New / pending reservation
+                    // -------------------------------
+
+                    val newOrderNotification =
+                        !order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        ) &&
+                                runCatching {
+
+                                    val createdAt =
+                                        java.time.Instant.parse(
+                                            order.createdAt
+                                        )
+
+                                    Duration
+                                        .between(
+                                            createdAt,
+                                            now
+                                        )
+                                        .toMinutes() in 0..1440
+
+                                }.getOrDefault(false)
+
+                    if (newOrderNotification) {
+
+                        currentProviderNotificationIds.add(
+                            "provider-order-${order.orderCode}"
+                        )
+                    }
+
+
+                    // -------------------------------
+                    // Pickup time approaching
+                    // -------------------------------
+
+                    val pickupNotification =
+                        !order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        ) &&
+                                runCatching {
+
+                                    val formatter =
+                                        DateTimeFormatter.ofPattern(
+                                            "h:mm a",
+                                            Locale.ENGLISH
+                                        )
+
+                                    val pickupStart =
+                                        LocalTime.parse(
+                                            order.pickupTime
+                                                .substringBefore("-")
+                                                .trim(),
+                                            formatter
+                                        )
+
+                                    val minutesUntil =
+                                        Duration.between(
+                                            localNow,
+                                            pickupStart
+                                        ).toMinutes()
+
+                                    minutesUntil in 0..60
+
+                                }.getOrDefault(false)
+
+                    if (pickupNotification) {
+
+                        currentProviderNotificationIds.add(
+                            "provider-pickup-${order.orderCode}"
+                        )
+                    }
+                }
+
+
+                // -------------------------------
+                // Low stock notification
+                // -------------------------------
+
+                allFoods.forEach { food ->
+
+                    if (food.quantity <= 0) {
+
+                        currentProviderNotificationIds.add(
+                            "provider-low-stock-${food.id}"
+                        )
+                    }
+                }
+
+
+                // Only UNVIEWED notifications
+                // should show the red dot.
+
                 val hasProviderNotifications =
-                    providerOrders.any { order ->
-
-                        // New / pending reservation
-                        val newOrderNotification =
-                            !order.status.equals(
-                                "COMPLETED",
-                                ignoreCase = true
-                            ) &&
-                                    runCatching {
-                                        val createdAt =
-                                            java.time.Instant.parse(
-                                                order.createdAt
-                                            )
-
-                                        Duration
-                                            .between(createdAt, now)
-                                            .toMinutes() in 0..1440
-
-                                    }.getOrDefault(false)
-
-
-                        // Pickup time approaching
-                        val pickupNotification = !order.status.equals(
-                            "COMPLETED", ignoreCase = true
-                        ) && runCatching {
-
-                            val formatter = DateTimeFormatter.ofPattern(
-                                "h:mm a", Locale.ENGLISH
-                            )
-
-                            val pickupStart = LocalTime.parse(
-                                order.pickupTime.substringBefore("-").trim(), formatter
-                            )
-
-                            val minutesUntil = Duration.between(
-                                    localNow, pickupStart
-                                ).toMinutes()
-
-                            minutesUntil in 0..60
-
-                        }.getOrDefault(false)
-
-                        newOrderNotification || pickupNotification
-
-                    } || allFoods.any {
-                        it.quantity <= 0
+                    currentProviderNotificationIds.any { notificationId ->
+                        !viewedProviderNotifications.contains(
+                            notificationId
+                        )
                     }
 
                 //Apply currently selected category
@@ -200,19 +272,306 @@ class HomeViewModel(
         }
     }
 
-    fun markProviderNotificationsViewed() {
-        _uiState.update {
-            it.copy(
-                providerNotificationsViewed = true
+    private val providerNotificationPrefs =
+        context.getSharedPreferences(
+            "provider_notification_state",
+            Context.MODE_PRIVATE
+        )
+
+    private fun getViewedProviderNotifications(
+        providerId: String
+    ): Set<String> {
+
+        return providerNotificationPrefs
+            .getStringSet(
+                "viewed_$providerId",
+                emptySet()
             )
+            ?.toSet()
+            ?: emptySet()
+    }
+
+    fun markProviderNotificationsViewed(
+        providerId: String
+    ) {
+        viewModelScope.launch {
+
+            try {
+
+                val orders =
+                    withContext(Dispatchers.IO) {
+                        orderRepository.getProviderOrders(
+                            providerId
+                        )
+                    }
+
+                val foods =
+                    withContext(Dispatchers.IO) {
+                        foodRepository.getFoodListingByProvider(
+                            providerId
+                        )
+                    }
+
+                val currentNotificationIds =
+                    mutableSetOf<String>()
+
+
+                // -------------------------------
+                // Order notifications
+                // -------------------------------
+
+                orders.forEach { order ->
+
+                    if (
+                        !order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        )
+                    ) {
+
+                        currentNotificationIds.add(
+                            "provider-order-${order.orderCode}"
+                        )
+
+                        currentNotificationIds.add(
+                            "provider-pickup-${order.orderCode}"
+                        )
+                    }
+                }
+
+
+                // -------------------------------
+                // Low stock notifications
+                // -------------------------------
+
+                foods.forEach { food ->
+
+                    if (food.quantity <= 0) {
+
+                        currentNotificationIds.add(
+                            "provider-low-stock-${food.id}"
+                        )
+                    }
+                }
+
+
+                // Save viewed notification IDs
+                markProviderNotificationIdsViewed(
+                    providerId = providerId,
+                    notificationIds = currentNotificationIds
+                )
+
+
+                // Immediately remove red dot
+                _uiState.update {
+
+                    it.copy(
+                        providerNotificationsViewed = true,
+                        hasProviderNotifications = false
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+
+                _uiState.update {
+
+                    it.copy(
+                        providerNotificationsViewed = true,
+                        hasProviderNotifications = false
+                    )
+                }
+            }
         }
     }
 
-    fun markConsumerNotificationsViewed() {
-        _uiState.update {
-            it.copy(
-                consumerNotificationsViewed = true
+
+    private fun markProviderNotificationIdsViewed(
+        providerId: String,
+        notificationIds: Set<String>
+    ) {
+
+        val current =
+            getViewedProviderNotifications(
+                providerId
+            ).toMutableSet()
+
+        current.addAll(
+            notificationIds
+        )
+
+        providerNotificationPrefs
+            .edit()
+            .putStringSet(
+                "viewed_$providerId",
+                current
             )
+            .apply()
+    }
+
+    private fun getViewedConsumerNotifications(
+        userId: String
+    ): Set<String> {
+
+        return notificationPrefs
+            .getStringSet(
+                "viewed_$userId",
+                emptySet()
+            )
+            ?.toSet()
+            ?: emptySet()
+    }
+
+    private fun markConsumerNotificationIdsViewed(
+        userId: String,
+        notificationIds: Set<String>
+    ) {
+
+        val current =
+            getViewedConsumerNotifications(userId)
+                .toMutableSet()
+
+        current.addAll(notificationIds)
+
+        notificationPrefs
+            .edit()
+            .putStringSet(
+                "viewed_$userId",
+                current
+            )
+            .apply()
+    }
+
+    fun markConsumerNotificationsViewed() {
+
+        viewModelScope.launch {
+
+            try {
+
+                val userId =
+                    supabase.auth.currentUserOrNull()?.id
+                        ?: return@launch
+
+                val orders =
+                    withContext(Dispatchers.IO) {
+                        orderRepository.getAllConsumerOrders(
+                            userId
+                        )
+                    }
+
+                val now =
+                    java.time.Instant.now()
+
+                val localNow =
+                    LocalTime.now()
+
+                val currentNotificationIds =
+                    mutableSetOf<String>()
+
+                orders.forEach { order ->
+
+                    // Completed notification
+                    if (
+                        order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        )
+                    ) {
+
+                        val completedAt =
+                            order.completedAt
+                                ?.let {
+                                    runCatching {
+                                        java.time.Instant.parse(it)
+                                    }.getOrNull()
+                                }
+
+                        if (completedAt != null) {
+
+                            val hoursPassed =
+                                Duration.between(
+                                    completedAt,
+                                    now
+                                ).toHours()
+
+                            if (hoursPassed in 0..1440) {
+
+                                currentNotificationIds.add(
+                                    "completed-${order.orderCode}"
+                                )
+                            }
+                        }
+                    }
+
+                    // Pickup notification
+                    if (
+                        !order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        )
+                    ) {
+
+                        val pickupNotification =
+                            runCatching {
+
+                                val formatter =
+                                    DateTimeFormatter.ofPattern(
+                                        "hh:mm a",
+                                        Locale.ENGLISH
+                                    )
+
+                                val pickupStart =
+                                    LocalTime.parse(
+                                        order.pickupTime
+                                            .substringBefore("-")
+                                            .trim(),
+                                        formatter
+                                    )
+
+                                val minutesUntil =
+                                    Duration.between(
+                                        localNow,
+                                        pickupStart
+                                    ).toMinutes()
+
+                                minutesUntil in 0..60
+
+                            }.getOrDefault(false)
+
+                        if (pickupNotification) {
+
+                            currentNotificationIds.add(
+                                "pickup-${order.orderCode}"
+                            )
+                        }
+                    }
+                }
+
+                markConsumerNotificationIdsViewed(
+                    userId = userId,
+                    notificationIds =
+                        currentNotificationIds
+                )
+
+                _uiState.update {
+
+                    it.copy(
+                        consumerNotificationsViewed = true,
+                        hasNotifications = false
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                _uiState.update {
+
+                    it.copy(
+                        consumerNotificationsViewed = true,
+                        hasNotifications = false
+                    )
+                }
+            }
         }
     }
 
@@ -448,6 +807,7 @@ class HomeViewModel(
     }
 
     fun loadConsumerNotificationState() {
+
         viewModelScope.launch {
 
             try {
@@ -463,92 +823,128 @@ class HomeViewModel(
                         )
                     }
 
-                val now = java.time.Instant.now()
-                val localNow = LocalTime.now()
+                val now =
+                    java.time.Instant.now()
 
-                val hasNotification =
-                    orders.any { order ->
+                val localNow =
+                    LocalTime.now()
 
-                        val completedNotification =
-                            if (
-                                order.status.equals(
-                                    "COMPLETED",
-                                    ignoreCase = true
+                val viewedIds =
+                    getViewedConsumerNotifications(
+                        userId
+                    )
+
+                val notificationIds =
+                    mutableSetOf<String>()
+
+                orders.forEach { order ->
+
+                    // --------------------------------
+                    // COMPLETED FOOD NOTIFICATION
+                    // --------------------------------
+
+                    if (
+                        order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        )
+                    ) {
+
+                        val completedAt =
+                            order.completedAt
+                                ?.let {
+                                    runCatching {
+                                        java.time.Instant.parse(it)
+                                    }.getOrNull()
+                                }
+
+                        if (completedAt != null) {
+
+                            val hoursPassed =
+                                Duration.between(
+                                    completedAt,
+                                    now
+                                ).toHours()
+
+                            if (hoursPassed in 0..1440) {
+
+                                notificationIds.add(
+                                    "completed-${order.orderCode}"
                                 )
-                            ) {
-                                order.completedAt
-                                    ?.let {
-                                        runCatching {
-                                            java.time.Instant.parse(it)
-                                        }.getOrNull()
-                                    }
-                                    ?.let { completedAt ->
-                                        Duration
-                                            .between(
-                                                completedAt,
-                                                now
-                                            )
-                                            .toHours() in 0..1440
-                                    } == true
-                            } else {
-                                false
                             }
+                        }
+                    }
+
+                    // --------------------------------
+                    // PICKUP TIME NOTIFICATION
+                    // --------------------------------
+
+                    if (
+                        !order.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        )
+                    ) {
 
                         val pickupNotification =
-                            if (
-                                !order.status.equals(
-                                    "COMPLETED",
-                                    ignoreCase = true
-                                )
-                            ) {
+                            runCatching {
 
-                                runCatching {
+                                val formatter =
+                                    DateTimeFormatter.ofPattern(
+                                        "hh:mm a",
+                                        Locale.ENGLISH
+                                    )
 
-                                    val formatter =
-                                        DateTimeFormatter
-                                            .ofPattern(
-                                                "hh:mm a",
-                                                Locale.ENGLISH
-                                            )
+                                val pickupStart =
+                                    LocalTime.parse(
+                                        order.pickupTime
+                                            .substringBefore("-")
+                                            .trim(),
+                                        formatter
+                                    )
 
-                                    val pickupStart =
-                                        LocalTime.parse(
-                                            order.pickupTime
-                                                .substringBefore("-")
-                                                .trim(),
-                                            formatter
-                                        )
+                                val minutesUntil =
+                                    Duration.between(
+                                        localNow,
+                                        pickupStart
+                                    ).toMinutes()
 
-                                    val minutesUntil =
-                                        Duration
-                                            .between(
-                                                localNow,
-                                                pickupStart
-                                            )
-                                            .toMinutes()
+                                minutesUntil in 0..60
 
-                                    minutesUntil in 0..60
+                            }.getOrDefault(false)
 
-                                }.getOrDefault(false)
+                        if (pickupNotification) {
 
-                            } else {
-                                false
-                            }
+                            notificationIds.add(
+                                "pickup-${order.orderCode}"
+                            )
+                        }
+                    }
+                }
 
-                        completedNotification ||
-                                pickupNotification
+                // Only notifications that have NOT
+                // been viewed should create the red dot.
+
+                val hasUnreadNotification =
+                    notificationIds.any {
+                        !viewedIds.contains(it)
                     }
 
                 _uiState.update {
+
                     it.copy(
                         hasNotifications =
-                            hasNotification
+                            hasUnreadNotification,
+
+                        consumerNotificationsViewed =
+                            !hasUnreadNotification
                     )
                 }
 
             } catch (e: Exception) {
 
                 _uiState.update {
+
                     it.copy(
                         hasNotifications = false
                     )

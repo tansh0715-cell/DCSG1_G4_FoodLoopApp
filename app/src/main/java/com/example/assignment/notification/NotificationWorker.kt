@@ -58,7 +58,7 @@ class NotificationWorker(
 
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.retry()
+            Result.failure()
         }
     }
 

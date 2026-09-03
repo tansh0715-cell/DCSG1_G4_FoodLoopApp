@@ -1,5 +1,6 @@
 package com.example.assignment.viewmodel.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.assignment.data.repository.AuthRepository
@@ -11,7 +12,8 @@ class HomeViewModelFactory(
     private val foodRepository: FoodRepository,
     private val restaurantRepository: RestaurantRepository,
     private val orderRepository: OrderRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val context: Context
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -25,7 +27,8 @@ class HomeViewModelFactory(
                 foodRepository = foodRepository,
                 restaurantRepository = restaurantRepository,
                 orderRepository = orderRepository,
-                 authRepository = authRepository
+                 authRepository = authRepository,
+                context = context
             ) as T
         }
 

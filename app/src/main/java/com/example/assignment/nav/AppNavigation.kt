@@ -179,7 +179,8 @@ fun AppNavigation(
                         foodRepository,
                         restaurantRepository,
                         orderRepository,
-                        authRepository
+                        authRepository,
+                        context
                     )
                 )
 
@@ -566,7 +567,8 @@ fun AppNavigation(
                             foodRepository,
                             restaurantRepository,
                             orderRepository,
-                            authRepository
+                            authRepository,
+                            context
                         )
                 )
 

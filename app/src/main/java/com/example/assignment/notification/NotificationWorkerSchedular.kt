@@ -70,21 +70,4 @@ object NotificationWorkerScheduler {
                 request
             )
     }
-
-    fun stop(
-        context: Context
-    ) {
-
-        WorkManager
-            .getInstance(context)
-            .cancelUniqueWork(
-                WORK_NAME
-            )
-
-        WorkManager
-            .getInstance(context)
-            .cancelUniqueWork(
-                NOW_WORK_NAME
-            )
-    }
 }

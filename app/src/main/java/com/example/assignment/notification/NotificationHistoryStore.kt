@@ -193,12 +193,4 @@ class NotificationHistoryStore(
                         it.role == role
             }
     }
-
-    fun clear() {
-
-        preferences
-            .edit()
-            .remove(KEY_NOTIFICATIONS)
-            .apply()
-    }
 }

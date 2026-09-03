@@ -51,6 +51,7 @@ import com.example.assignment.components.ProviderOrderCard
 import com.example.assignment.components.ReceiptRow
 import com.example.assignment.components.SaverOrderCard
 import com.example.assignment.model.Order
+import com.example.assignment.notification.NotificationWorkerScheduler
 import com.example.assignment.viewmodel.order.OrderViewModel
 import com.example.assignment.util.mapboxStaticMapUrl
 import com.example.assignment.util.openGoogleMaps
@@ -138,9 +139,9 @@ fun ProviderOrderScreen(
     navController: NavController,
     orderViewModel: OrderViewModel
 ) {
+    val context = LocalContext.current
 
     val orders by orderViewModel.orders.collectAsStateWithLifecycle()
-
     val foodsByOrderId by orderViewModel.foodByOrderId.collectAsStateWithLifecycle()
 
     var selectedOrder by remember {
@@ -241,6 +242,9 @@ fun ProviderOrderScreen(
                         showPickupDialog = false
                         selectedOrder = null
                         pickupError = null
+
+                        // Trigger consumer notification immediately
+                        NotificationWorkerScheduler.runNow(context)
 
                         orderViewModel.loadProviderOrders()
                     },

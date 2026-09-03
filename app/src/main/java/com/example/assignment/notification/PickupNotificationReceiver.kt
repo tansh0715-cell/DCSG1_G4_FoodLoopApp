@@ -20,10 +20,6 @@ class PickupNotificationReceiver : BroadcastReceiver() {
             intent.getStringExtra("ORDER_ID")
                 ?: return
 
-        val orderCode =
-            intent.getStringExtra("ORDER_CODE")
-                ?: orderId
-
         val pendingResult = goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
