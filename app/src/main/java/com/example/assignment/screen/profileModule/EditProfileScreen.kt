@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.example.assignment.components.FormField
 import com.example.assignment.viewmodel.profile.ProfileViewModel
 
 @Composable
@@ -111,55 +112,46 @@ fun EditProfileScreen(
                         enabled = false,
                     )
                     if (viewModel.role == "FOOD_SAVER") {
-                        OutlinedTextField(
+                        FormField(
+                            label = "Name",
                             value = viewModel.name,
                             onValueChange = {
                                 viewModel.name = it
                                 if (viewModel.nameError != null) viewModel.clearFieldErrors()
                             },
-                            label = { Text("Name") },
+                            placeholder = "Enter your name",
                             modifier = Modifier.fillMaxWidth(),
-                            isError = viewModel.nameError != null,
-                            supportingText = {
-                                viewModel.nameError?.let {
-                                    Text(text = it, color = MaterialTheme.colorScheme.error)
-                                }
-                            },
-                            singleLine = true
+                            maxLength = 30,
+                            errorMessage = viewModel.nameError
                         )
+
+
                     } else if (viewModel.role == "FOOD_PROVIDER") {
-                        OutlinedTextField(
+                        FormField(
+                            label = "Restaurant Name",
                             value = viewModel.restaurantName,
                             onValueChange = {
                                 viewModel.restaurantName = it
                                 if (viewModel.restaurantNameError != null) viewModel.clearFieldErrors()
                             },
-                            label = { Text("Restaurant Name") },
+                            placeholder = "Enter restaurant name",
                             modifier = Modifier.fillMaxWidth(),
-                            isError = viewModel.restaurantNameError != null,
-                            supportingText = {
-                                viewModel.restaurantNameError?.let {
-                                    Text(text = it, color = MaterialTheme.colorScheme.error)
-                                }
-                            },
-                            singleLine = true
+                            maxLength = 30,
+                            errorMessage = viewModel.restaurantNameError
                         )
 
-                        OutlinedTextField(
+                        FormField(
+                            label = "Address",
                             value = viewModel.address,
                             onValueChange = {
                                 viewModel.address = it
                                 if (viewModel.addressError != null) viewModel.clearFieldErrors()
                             },
-                            label = { Text("Address") },
+                            placeholder = "Enter address",
                             modifier = Modifier.fillMaxWidth(),
-                            isError = viewModel.addressError != null,
-                            supportingText = {
-                                viewModel.addressError?.let {
-                                    Text(text = it, color = MaterialTheme.colorScheme.error)
-                                }
-                            },
-                            minLines = 2
+                            singleLine = false,
+                            minLines = 2,
+                            errorMessage = viewModel.addressError
                         )
 
                         // License Photo - editable to license-photos bucket
@@ -255,21 +247,18 @@ fun EditProfileScreen(
 
                     }
 
-                    OutlinedTextField(
+                    FormField(
+                        label = "Phone",
                         value = viewModel.phone,
                         onValueChange = {
                             viewModel.phone = it
                             if (viewModel.phoneError != null) viewModel.clearFieldErrors()
                         },
-                        label = { Text("Phone") },
+                        placeholder = "Enter phone number",
                         modifier = Modifier.fillMaxWidth(),
-                        isError = viewModel.phoneError != null,
-                        supportingText = {
-                            viewModel.phoneError?.let {
-                                Text(text = it, color = MaterialTheme.colorScheme.error)
-                            }
-                        },
-                        singleLine = true
+                        errorMessage = viewModel.phoneError,
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+                        maxLength = 11
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))

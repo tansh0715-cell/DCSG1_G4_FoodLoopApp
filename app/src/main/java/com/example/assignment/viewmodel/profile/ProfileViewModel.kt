@@ -174,8 +174,8 @@ class ProfileViewModel(
         if (phone.isBlank()) {
             phoneError = "Phone is required"
             isValid = false
-        } else if (!phone.matches(Regex("^[0-9+\\- ]{8,20}$"))) {
-            phoneError = "Enter valid phone (8-20 digits)"
+        } else if (!phone.trim().matches(Regex("^01[0-9]{8,9}$"))) {
+            phoneError = "Invalid phone number"
             isValid = false
         }
 

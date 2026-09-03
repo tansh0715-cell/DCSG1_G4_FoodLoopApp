@@ -72,6 +72,13 @@ class FoodReminderReceiver : BroadcastReceiver() {
                             saverId = intent.getStringExtra("SAVER_ID") ?: "",
                             status = "EXPIRED"
                         )
+
+                        // Send expired notification (id +1 to avoid collision with reminder)
+                        showExpiredNotification(
+                            context = context,
+                            foodName = foodName,
+                            expireDate = expireDate
+                        )
                     }
                 }
 
@@ -128,5 +135,44 @@ class FoodReminderReceiver : BroadcastReceiver() {
 
         NotificationManagerCompat.from(context)
             .notify(foodName.hashCode(), notification)
+    }
+
+    private fun showExpiredNotification(
+        context: Context,
+        foodName: String,
+        expireDate: String
+    ) {
+
+        val channelId = "food_expiration_channel"
+
+        val channel = NotificationChannel(
+            channelId,
+            "Food Expiration Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notifications for food approaching its expiry date"
+        }
+
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(channel)
+
+        val notification =
+            NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Food Expired")
+                .setContentText("$foodName expired on $expireDate. Please discard or handle it.")
+                .setStyle(
+                    NotificationCompat.BigTextStyle().bigText(
+                        "$foodName has expired on $expireDate. Please discard it or handle it promptly."
+                    )
+                )
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .build()
+
+        NotificationManagerCompat.from(context)
+            .notify(foodName.hashCode() + 1, notification)
     }
 }
