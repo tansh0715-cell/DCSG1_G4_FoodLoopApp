@@ -5,7 +5,6 @@ import com.example.assignment.model.inventoryModule.Food
 import com.example.assignment.model.inventoryModule.FoodInput
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
-import kotlinx.serialization.Serializable
 
 class InventoryRepository{
     suspend fun getInventory(saverId: String): List<Food> {
