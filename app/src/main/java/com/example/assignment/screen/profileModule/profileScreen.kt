@@ -294,6 +294,7 @@ fun ProfileScreen(
                 ) {
 
                     Column(
+                        verticalArrangement = Arrangement.Center,
                         horizontalAlignment =
                             Alignment.CenterHorizontally,
                         modifier = Modifier
@@ -331,6 +332,7 @@ fun ProfileScreen(
                 ) {
 
                     Column(
+                        verticalArrangement = Arrangement.Center,
                         horizontalAlignment =
                             Alignment.CenterHorizontally,
                         modifier = Modifier
@@ -367,6 +369,7 @@ fun ProfileScreen(
                 ) {
 
                     Column(
+                        verticalArrangement = Arrangement.Center,
                         horizontalAlignment =
                             Alignment.CenterHorizontally,
                         modifier = Modifier
