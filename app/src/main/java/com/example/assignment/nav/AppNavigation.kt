@@ -67,6 +67,7 @@ import com.example.assignment.viewmodel.inventory.InventoryViewModelFactory
 import com.example.assignment.viewmodel.order.OrderViewModel
 import com.example.assignment.viewmodel.order.OrderViewModelFactory
 import com.example.assignment.viewmodel.profile.ChangePasswordViewModel
+import com.example.assignment.viewmodel.profile.ChangePasswordViewModelFactory
 import com.example.assignment.viewmodel.profile.ProfileViewModel
 import com.example.assignment.viewmodel.profile.ProfileViewModelFactory
 import com.example.assignment.viewmodel.restaurant.RestaurantDetailViewModel
@@ -875,19 +876,13 @@ fun AppNavigation(
         }
 
         composable("CHANGE_PASSWORD") {
-            val changePasswordViewModel = androidx.lifecycle.viewmodel.compose.viewModel<ChangePasswordViewModel>(
-                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                        return ChangePasswordViewModel(authRepository) as T
-                    }
-                }
-            )
+            val changePasswordViewModel: ChangePasswordViewModel = viewModel(
+                factory = ChangePasswordViewModelFactory(authRepository = authRepository))
             Scaffold(topBar = { AppTopBar("Change Password", navController) }) { innerPadding ->
                 ChangePasswordScreen(
                     innerPadding = innerPadding,
                     navController = navController,
-                    viewModel = changePasswordViewModel
+                    vm = changePasswordViewModel
                 )
             }
         }

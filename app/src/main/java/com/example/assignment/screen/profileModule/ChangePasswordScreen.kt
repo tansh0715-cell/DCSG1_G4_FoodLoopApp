@@ -29,14 +29,14 @@ import com.example.assignment.viewmodel.profile.ChangePasswordViewModel
 fun ChangePasswordScreen(
     innerPadding: PaddingValues,
     navController: NavController,
-    viewModel: ChangePasswordViewModel
+    vm: ChangePasswordViewModel
 ) {
     val context = LocalContext.current
 
-    LaunchedEffect(viewModel.errorMessage, viewModel.successMessage) {
-        viewModel.successMessage?.let {
+    LaunchedEffect(vm.successMessage) {
+        vm.successMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            viewModel.clearMessages()
+            vm.clearMessages()
         }
     }
 
@@ -56,18 +56,18 @@ fun ChangePasswordScreen(
         )
 
         OutlinedTextField(
-            value = viewModel.currentPassword,
+            value = vm.currentPassword,
             onValueChange = {
-                viewModel.currentPassword = it
-                if (viewModel.currentPasswordError != null) viewModel.clearErrors()
+                vm.currentPassword = it
+                if (vm.currentPasswordError != null) vm.clearErrors()
             },
             label = { Text("Current Password *") },
             placeholder = { Text("Current password (required)") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            isError = viewModel.currentPasswordError != null,
+            isError = vm.currentPasswordError != null,
             supportingText = {
-                viewModel.currentPasswordError?.let {
+                vm.currentPasswordError?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
                 } ?: Text(text = "Required to verify identity", color = MaterialTheme.colorScheme.onSecondary)
             },
@@ -75,18 +75,18 @@ fun ChangePasswordScreen(
         )
 
         OutlinedTextField(
-            value = viewModel.newPassword,
+            value = vm.newPassword,
             onValueChange = {
-                viewModel.newPassword = it
-                if (viewModel.newPasswordError != null) viewModel.clearErrors()
+                vm.newPassword = it
+                if (vm.newPasswordError != null) vm.clearErrors()
             },
             label = { Text("New Password") },
             placeholder = { Text("At least 6 characters") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            isError = viewModel.newPasswordError != null,
+            isError = vm.newPasswordError != null,
             supportingText = {
-                viewModel.newPasswordError?.let {
+                vm.newPasswordError?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -94,45 +94,36 @@ fun ChangePasswordScreen(
         )
 
         OutlinedTextField(
-            value = viewModel.confirmPassword,
+            value = vm.confirmPassword,
             onValueChange = {
-                viewModel.confirmPassword = it
-                if (viewModel.confirmPasswordError != null) viewModel.clearErrors()
+                vm.confirmPassword = it
+                if (vm.confirmPasswordError != null) vm.clearErrors()
             },
             label = { Text("Confirm New Password *") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            isError = viewModel.confirmPasswordError != null || viewModel.isConfirmMismatch,
+            isError = vm.confirmPasswordError != null || vm.isConfirmMismatch,
             supportingText = {
                 when {
-                    viewModel.confirmPasswordError != null -> Text(text = viewModel.confirmPasswordError!!, color = MaterialTheme.colorScheme.error)
-                    viewModel.isConfirmMismatch -> Text(text = "Passwords do not match", color = MaterialTheme.colorScheme.error)
+                    vm.confirmPasswordError != null -> Text(text = vm.confirmPasswordError!!, color = MaterialTheme.colorScheme.error)
+                    vm.isConfirmMismatch -> Text(text = "Passwords do not match", color = MaterialTheme.colorScheme.error)
                     else -> {}
                 }
             },
             singleLine = true
         )
 
-        if (viewModel.errorMessage != null) {
-            Text(
-                text = viewModel.errorMessage ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
-                viewModel.changePassword {
-                    navController.popBackStack()
-                }
+                vm.changePassword(onSuccess = {navController.popBackStack()})
             },
-            enabled = !viewModel.isSaving && !viewModel.isConfirmMismatch && viewModel.newPassword.isNotBlank() && viewModel.confirmPassword.isNotBlank() && viewModel.currentPassword.isNotBlank(),
+            enabled = !vm.isSaving && !vm.isConfirmMismatch && vm.newPassword.isNotBlank() && vm.confirmPassword.isNotBlank() && vm.currentPassword.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (viewModel.isSaving) {
+            if (vm.isSaving) {
                 CircularProgressIndicator(
                     modifier = Modifier
                         .height(20.dp)

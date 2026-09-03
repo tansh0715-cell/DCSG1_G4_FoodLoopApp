@@ -25,30 +25,27 @@ class ChangePasswordViewModel(
 
     var isSaving by mutableStateOf(false)
         private set
-    var errorMessage by mutableStateOf<String?>(null)
-        private set
+
     var successMessage by mutableStateOf<String?>(null)
         private set
+
+    val isConfirmMismatch: Boolean
+        get() = confirmPassword.isNotBlank() && newPassword != confirmPassword
 
     fun clearErrors() {
         currentPasswordError = null
         newPasswordError = null
         confirmPasswordError = null
-        errorMessage = null
         successMessage = null
     }
 
     fun clearMessages() {
-        errorMessage = null
         successMessage = null
     }
 
     // Used to disable button in UI when mismatch
-    val isConfirmMismatch: Boolean
-        get() = confirmPassword.isNotBlank() && newPassword != confirmPassword
 
-    val isFormValid: Boolean
-        get() = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank() && newPassword == confirmPassword && newPassword.length >= 6
+
 
     private fun validate(): Boolean {
         clearErrors()
@@ -81,7 +78,6 @@ class ChangePasswordViewModel(
         if (!validate()) return
         viewModelScope.launch {
             isSaving = true
-            errorMessage = null
             successMessage = null
             try {
                 // Re-auth: verify current password against Supabase
@@ -94,7 +90,6 @@ class ChangePasswordViewModel(
                     }
                 } catch (e: Exception) {
                     currentPasswordError = "Current password is incorrect"
-                    errorMessage = "Current password is incorrect"
                     return@launch
                 }
                 // Current verified, now update to new password
@@ -102,9 +97,7 @@ class ChangePasswordViewModel(
                 successMessage = "Password updated successfully"
                 onSuccess()
             } catch (e: Exception) {
-                if (currentPasswordError == null) {
-                    errorMessage = e.message ?: "Failed to update password"
-                }
+
             } finally {
                 isSaving = false
             }
