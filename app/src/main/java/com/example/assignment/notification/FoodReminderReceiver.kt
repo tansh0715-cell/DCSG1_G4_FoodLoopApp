@@ -1,6 +1,5 @@
 package com.example.assignment.notification
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
