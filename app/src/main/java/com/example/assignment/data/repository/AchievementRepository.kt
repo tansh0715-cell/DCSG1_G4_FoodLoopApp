@@ -1,9 +1,9 @@
 package com.example.assignment.data.repository
 
+import com.example.assignment.model.Order
 import com.example.assignment.model.achievementModule.Achievement
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.Serializable
 
 class AchievementRepository(
     private val supabase: SupabaseClient
@@ -33,7 +33,7 @@ class AchievementRepository(
                         )
                     }
                 }
-                .decodeList<OrderQuantity>()
+                .decodeList<Order>()
 
         return orders.sumOf {
             it.quantity
@@ -41,8 +41,3 @@ class AchievementRepository(
     }
 }
 
-
-@Serializable
-private data class OrderQuantity(
-    val quantity: Int
-)

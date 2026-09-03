@@ -9,35 +9,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class AchievementProgress(
-    val achievement: Achievement,
-    val current: Int
-)
 
 class AchievementViewModel(
     private val repository: AchievementRepository,
     private val currentUserId: String
 ) : ViewModel() {
 
-    private val _achievements =
-        MutableStateFlow<List<AchievementProgress>>(emptyList())
+    private val _achievements = MutableStateFlow<List<Achievement>>(emptyList())
+    val achievements = _achievements.asStateFlow()
 
-    val achievements: StateFlow<List<AchievementProgress>> =
-        _achievements.asStateFlow()
+    private val _currentProgress = MutableStateFlow(0)
+    val currentProgress = _currentProgress.asStateFlow()
 
-
-    private val _isLoading =
-        MutableStateFlow(false)
-
-    val isLoading: StateFlow<Boolean> =
-        _isLoading.asStateFlow()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
 
 
-    private val _error =
-        MutableStateFlow<String?>(null)
-
-    val error: StateFlow<String?> =
-        _error.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
+    val error = _error.asStateFlow()
 
 
     fun loadAchievements() {
@@ -50,38 +39,19 @@ class AchievementViewModel(
             try {
 
                 // Get all achievements
-                val achievements =
-                    repository.getAchievements()
+                _achievements.value = repository.getAchievements()
 
-                // Calculate total meals directly
-                // from the user's orders
-                val totalMeals =
+                _currentProgress.value  =
                     repository.getTotalMealsSaved(
                         currentUserId
                     )
 
 
-                // Apply the same meal count
-                // to every achievement
-                _achievements.value =
-                    achievements.map { achievement ->
-
-                        AchievementProgress(
-                            achievement = achievement,
-                            current = totalMeals
-                        )
-                    }
-
             } catch (e: Exception) {
-
                 e.printStackTrace()
-
-                _error.value =
-                    e.message
-                        ?: "Failed to load achievements"
+                _error.value = e.message ?: "Failed to load achievements"
 
             } finally {
-
                 _isLoading.value = false
             }
         }

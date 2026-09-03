@@ -30,26 +30,19 @@ import com.example.assignment.viewmodel.achievement.AchievementViewModel
 @Composable
 fun AchievementScreen(
     innerPadding: PaddingValues,
-    viewModel: AchievementViewModel
+    vm: AchievementViewModel
 ) {
 
-    val achievements by
-    viewModel.achievements
-        .collectAsStateWithLifecycle()
+    val achievements by vm.achievements.collectAsStateWithLifecycle()
 
-    val isLoading by
-    viewModel.isLoading
-        .collectAsStateWithLifecycle()
+    val isLoading by vm.isLoading.collectAsStateWithLifecycle()
 
-    val error by
-    viewModel.error
-        .collectAsStateWithLifecycle()
+    val error by vm.error.collectAsStateWithLifecycle()
 
+    val currentProgress by vm.currentProgress.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-
-        viewModel.loadAchievements()
-
+        vm.loadAchievements()
     }
 
 
@@ -73,9 +66,7 @@ fun AchievementScreen(
                 verticalArrangement =
                     Arrangement.Center
             ) {
-
                 CircularProgressIndicator()
-
             }
 
         } else if (error != null) {
@@ -114,23 +105,10 @@ fun AchievementScreen(
 
                 items(
                     achievements
-                ) { progress ->
-
-                    val achievement =
-                        progress.achievement
-
-                    val current =
-                        progress.current
-
+                ) { achievement ->
 
                     // Prevent progress from exceeding 100%
-                    val progressValue =
-                        (
-                                current.toFloat() /
-                                        achievement.target.toFloat()
-                                )
-                            .coerceIn(0f, 1f)
-
+                    val progressValue = (currentProgress.toFloat() / achievement.target.toFloat()).coerceIn(0f, 1f)
 
                     ElevatedCard(
                         modifier =
@@ -204,7 +182,7 @@ fun AchievementScreen(
 
                                 // Completed
                                 if (
-                                    current >=
+                                    currentProgress >=
                                     achievement.target
                                 ) {
 
@@ -281,7 +259,7 @@ fun AchievementScreen(
 
                                     Text(
                                         text =
-                                            "${current}/${achievement.target}",
+                                            "${currentProgress}/${achievement.target}",
 
                                         style =
                                             MaterialTheme

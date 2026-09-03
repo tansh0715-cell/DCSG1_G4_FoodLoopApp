@@ -917,22 +917,16 @@ fun AppNavigation(
                 viewModel(
                     factory =
                         AchievementViewModelFactory(
-                            repository =
-                                achievementRepository,
-
-                            currentUserId =
-                                currentUserId
+                            repository = achievementRepository,
+                            currentUserId = currentUserId
                         )
                 )
 
             Scaffold(topBar = {AppTopBar("Achievement",navController)}) {
                 innerPadding ->
                 AchievementScreen(
-                    innerPadding =
-                        innerPadding,
-
-                    viewModel =
-                        achievementViewModel
+                    innerPadding = innerPadding,
+                    vm = achievementViewModel
                 )
             }
         }
