@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -87,14 +88,41 @@ fun RestaurantDetailScreen(
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
-                AsyncImage(
-                    model = restaurant.image_url,
-                    contentDescription = restaurant.name,
-                    contentScale = ContentScale.Crop,
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(230.dp)
-                )
+                ) {
+
+                    AsyncImage(
+                        model = restaurant.image_url,
+                        contentDescription = restaurant.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    IconButton(
+                        onClick = {
+                            navController.popBackStack()
+                        },
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.85f),
+                                RoundedCornerShape(50)
+                            )
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                id = R.drawable.arrow_back_24dp_e3e3e3_fill0_wght400_grad0_opsz24
+                            ),
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+
+
                 //restaurant info
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(

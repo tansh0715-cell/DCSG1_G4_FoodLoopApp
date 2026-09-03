@@ -32,9 +32,6 @@ class AddFoodViewModel(
         private set
     //other classes can read editingFoodId but only AddFoodViewModel can change it
 
-    // Keep the original system-generated pickup date when editing
-    private var editingPickupDate: String? = null
-
     //record UI state
     //all form values and validation errors are stored inside AddFoodUiState
     private val _uiState = MutableStateFlow(AddFoodUiState())
@@ -209,9 +206,6 @@ class AddFoodViewModel(
 
                         return@launch
                     }
-
-                    // Keep the original system-generated pickup date
-                    editingPickupDate = food.pickupDate
 
                     _uiState.update {
                         it.copy(
@@ -533,13 +527,10 @@ class AddFoodViewModel(
             return
         }
 
-        val pickupDate: String
-
-        if (editingFoodId == null) {
-
-            // NEW FOOD
-            // The system automatically determines the pickup date.
-            pickupDate = calculatePickupDate(
+        // The system automatically determines the pickup date
+        // for both new food and edited food.
+        val pickupDate =
+            calculatePickupDate(
                 currentState.pickupTime
             ) ?: run {
                 _uiEvent.trySend(
@@ -549,20 +540,6 @@ class AddFoodViewModel(
                 )
                 return
             }
-
-        } else {
-
-            // EDIT FOOD
-            // Keep the original system-generated pickup date.
-            pickupDate = editingPickupDate ?: run {
-                _uiEvent.trySend(
-                    AddFoodEvent.ShowToast(
-                        "Pickup date is missing"
-                    )
-                )
-                return
-            }
-        }
 
         // Everything that calls suspend functions goes inside here
         viewModelScope.launch {

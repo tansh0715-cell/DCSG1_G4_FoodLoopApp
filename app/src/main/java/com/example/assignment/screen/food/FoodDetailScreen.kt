@@ -89,6 +89,21 @@ fun FoodDetailScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        id = R.drawable.arrow_back_24dp_e3e3e3_fill0_wght400_grad0_opsz24
+                    ),
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
+            }
         }
 
         Column(

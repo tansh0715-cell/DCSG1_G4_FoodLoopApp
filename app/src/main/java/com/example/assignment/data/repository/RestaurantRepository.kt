@@ -37,14 +37,27 @@ class RestaurantRepository(
         longitude: Double
     ): List<NearbyRestaurantRow> {
 
-        return supabase.postgrest.rpc(
-            "nearby_restaurants",
-            mapOf(
-                "user_lat" to latitude,
-                "user_lon" to longitude,
-                "radius_meters" to 10000.0
+        // First get nearby restaurants from RPC
+        val nearbyRestaurants =
+            supabase.postgrest.rpc(
+                "nearby_restaurants",
+                mapOf(
+                    "user_lat" to latitude,
+                    "user_lon" to longitude,
+                    "radius_meters" to 10000.0
+                )
+            ).decodeList<NearbyRestaurantRow>()
+
+        // Get image_url directly from restaurants table
+        return nearbyRestaurants.map { nearby ->
+
+            val restaurant =
+                getRestaurantById(nearby.id)
+
+            nearby.copy(
+                imageUrl = restaurant?.image_url
             )
-        ).decodeList()
+        }
     }
 
     suspend fun getRestaurantById(
