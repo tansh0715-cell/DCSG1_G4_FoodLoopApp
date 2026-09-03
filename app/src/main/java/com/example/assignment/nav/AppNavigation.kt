@@ -24,6 +24,7 @@ import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.AchievementRepository
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.data.repository.FoodRepository
+import com.example.assignment.data.repository.InventoryRepository
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.repository.ProfileRepository
 import com.example.assignment.data.repository.RestaurantRepository
@@ -93,9 +94,10 @@ fun AppNavigation(
         OrderRepository(supabase)
     }
 
-    val achievementRepository = remember {
-        AchievementRepository(supabase)
-    }
+    val inventoryRepository = remember { InventoryRepository() }
+    val profileRepository = remember { ProfileRepository(supabase) }
+
+    val achievementRepository = remember { AchievementRepository(supabase) }
 
     val currentUserId = supabase.auth.currentUserOrNull()?.id.orEmpty()
     val context = LocalContext.current
@@ -771,7 +773,11 @@ fun AppNavigation(
         }
 
         composable("INVENTORY_SCREEN"){
-            val inventoryViewModel: InventoryViewModel = viewModel(factory = InventoryViewModelFactory(currentUserId))
+            val inventoryViewModel: InventoryViewModel = viewModel(
+                factory = InventoryViewModelFactory(
+                    currentUserId,
+                    inventoryRepository)
+            )
             Scaffold(
                 bottomBar = {
                     AppNavigationBar(
@@ -789,7 +795,11 @@ fun AppNavigation(
         }
 
         composable("ADD_INVENTORY"){
-            val inventoryViewModel: InventoryViewModel = viewModel(factory = InventoryViewModelFactory(currentUserId))
+            val inventoryViewModel: InventoryViewModel = viewModel(
+                factory = InventoryViewModelFactory(
+                    currentUserId,
+                    inventoryRepository)
+            )
             Scaffold(topBar = {AppTopBar("Add Item", navController)})
             { innerPadding ->
                 AddItemScreen(
@@ -854,15 +864,17 @@ fun AppNavigation(
         composable("ITEM_DETAIL/{itemId}"){ backStackEntry ->
 
             val itemId = backStackEntry.arguments?.getString("itemId")
-            val inventoryViewModel: InventoryViewModel = viewModel(factory = InventoryViewModelFactory(currentUserId))
-            Scaffold(topBar = {AppTopBar("Add Item", navController)}) {
+            val inventoryViewModel: InventoryViewModel = viewModel(
+                factory = InventoryViewModelFactory(
+                    currentUserId,
+                    inventoryRepository))
+            Scaffold(topBar = {AppTopBar("Item Details", navController)}) {
                 innerPadding ->
                 ItemDetailScreen(innerPadding, inventoryViewModel, itemId,navController)
             }
         }
 
         composable("EDIT_PROFILE") {
-            val profileRepository = remember { ProfileRepository(supabase) }
             val profileViewModel: ProfileViewModel = viewModel(
                 factory = ProfileViewModelFactory(profileRepository, currentUserId)
             )

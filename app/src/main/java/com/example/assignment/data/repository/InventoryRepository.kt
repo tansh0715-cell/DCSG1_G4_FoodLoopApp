@@ -7,7 +7,6 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.Serializable
 
-@Serializable
 class InventoryRepository{
     suspend fun getInventory(saverId: String): List<Food> {
         return supabase.from("inventory")

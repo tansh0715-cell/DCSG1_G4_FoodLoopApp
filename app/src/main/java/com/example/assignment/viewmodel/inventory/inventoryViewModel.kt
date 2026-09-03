@@ -19,8 +19,11 @@ import kotlinx.datetime.todayIn
 import kotlinx.datetime.minus
 import kotlin.time.Clock
 
-class InventoryViewModel(val saverId: String) : ViewModel() {
-    private val repository = InventoryRepository()
+class InventoryViewModel(
+    val saverId: String,
+    val repository: InventoryRepository
+    ) : ViewModel() {
+
     var foods by mutableStateOf<List<Food>>(emptyList()) //Data
 
      var selectedFilter by mutableStateOf(0) //Filter

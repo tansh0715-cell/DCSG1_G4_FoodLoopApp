@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,14 +16,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,25 +46,18 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.assignment.R
-import com.example.assignment.components.AppTopBar
 import com.example.assignment.components.FormField
-import com.example.assignment.model.inventoryModule.Food
-import com.example.assignment.model.inventoryModule.FoodInput
 import com.example.assignment.ui.theme.appButtonColors
 import com.example.assignment.viewmodel.inventory.InventoryViewModel
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toLocalDate
 import java.io.File
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDatePickerState
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.Instant
-import kotlinx.datetime.toLocalDate
 
 @Composable
 fun AddItemScreen(

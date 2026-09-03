@@ -23,12 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.viewmodel.inventory.InventoryViewModel
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +37,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -61,7 +57,6 @@ fun ItemDetailScreen(
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     val food = vm.foods.find { it.item_id == itemId }
-
 
 
 
@@ -90,13 +85,9 @@ fun ItemDetailScreen(
         return
     }
 
-    var reminderDays by remember(food.item_id) {
-        mutableStateOf(food.reminder_days)
-    }
+    var reminderDays by remember(food.item_id) { mutableStateOf(food.reminder_days) }
 
-    var reminderExpanded by remember {
-        mutableStateOf(false)
-    }
+    var reminderExpanded by remember { mutableStateOf(false) }
 
 
 
