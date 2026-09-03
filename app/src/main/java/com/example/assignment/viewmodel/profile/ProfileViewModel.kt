@@ -61,9 +61,6 @@ class ProfileViewModel(
         pendingRestaurantImageBytes = bytes
     }
 
-    fun clearPendingRestaurantImage() {
-        pendingRestaurantImageBytes = null
-    }
 
     // License photo (now editable to license-photos bucket)
     var pendingLicenseImageBytes by mutableStateOf<ByteArray?>(null)
@@ -73,9 +70,7 @@ class ProfileViewModel(
         pendingLicenseImageBytes = bytes
     }
 
-    fun clearPendingLicenseImage() {
-        pendingLicenseImageBytes = null
-    }
+
 
     var isProfileLoaded by mutableStateOf(false)
         private set
@@ -183,7 +178,8 @@ class ProfileViewModel(
     }
 
     fun saveProfile(onSuccess: () -> Unit = {}) {
-        if (!validate()) return
+        if (!validate())
+            return
 
         viewModelScope.launch {
             isSaving = true

@@ -33,14 +33,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -48,21 +45,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.assignment.R
 import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.AuthRepository
-import com.example.assignment.data.repository.ProfileRepository
-import com.example.assignment.data.supabase.supabase
 import com.example.assignment.viewmodel.order.OrderViewModel
 import com.example.assignment.viewmodel.profile.ProfileViewModel
-import com.example.assignment.viewmodel.profile.ProfileViewModelFactory
-import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
+    vm: ProfileViewModel,
     innerPadding: PaddingValues,
     navController: NavController,
     authRepository: AuthRepository,
@@ -71,21 +64,14 @@ fun ProfileScreen(
 ) {
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Profile ViewModel - loads real user data from Supabase
-    val currentUserId = supabase.auth.currentUserOrNull()?.id.orEmpty()
-    val profileRepository = remember { ProfileRepository(supabase) }
-    val profileViewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModelFactory(profileRepository, currentUserId)
-    )
 
     // Reload profile when screen resumes (e.g., after editing)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                profileViewModel.loadProfile()
+                vm.loadProfile()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -94,7 +80,7 @@ fun ProfileScreen(
 
     // ==============================
     // Get orders from OrderViewModel
-    // ==============================
+    // ====================
 
     val orders by orderViewModel
         ?.orders
@@ -103,7 +89,6 @@ fun ProfileScreen(
             mutableStateOf(emptyList())
         }
 
-    // Food information for each order
     val foodsByOrderId by orderViewModel
         ?.foodByOrderId
         ?.collectAsStateWithLifecycle()
@@ -111,7 +96,6 @@ fun ProfileScreen(
             androidx.compose.runtime.mutableStateOf(emptyMap())
         }
 
-    // History orders (COMPLETED, already picked up) for stats
     val historyOrders by orderViewModel
         ?.historyOrders
         ?.collectAsStateWithLifecycle()
@@ -124,15 +108,14 @@ fun ProfileScreen(
 
 
     // ==============================
-    // Calculate Saver statistics — include reservation history
+    // Calculate Saver statistics
     // ==============================
 
-    // Combined paid orders = active + history distinct, payment_success = true
     val combinedOrders = remember(orders, historyOrders) {
         (orders + historyOrders).distinctBy { it.id }
     }
 
-    // Merge food maps for moneySaved lookup
+
     val combinedFoodMap = remember(foodsByOrderId, historyFoodByOrderId) {
         foodsByOrderId + historyFoodByOrderId
     }
@@ -177,7 +160,7 @@ fun ProfileScreen(
             .padding(innerPadding)
     ) {
 
-        // Title — same as My Reservations (OrderScreen.kt:83)
+
         Text(
             text = "Profile",
             fontSize = 24.sp,
@@ -211,9 +194,9 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
 
-                    // Profile picture — hidden for saver, provider reads from restaurantPicture
-                    if (profileViewModel.role == "FOOD_PROVIDER") {
-                        val avatarUrl = profileViewModel.restaurantPicture
+
+                    if (vm.role == "FOOD_PROVIDER") {
+                        val avatarUrl = vm.restaurantPicture
                         if (!avatarUrl.isNullOrBlank()) {
                             AsyncImage(
                                 model = avatarUrl,
@@ -241,7 +224,7 @@ fun ProfileScreen(
                     }
 
 
-                    if (profileViewModel.isLoading && !profileViewModel.isProfileLoaded) {
+                    if (vm.isLoading && !vm.isProfileLoaded) {
                         Box(
                             modifier = Modifier.padding(5.dp),
                             contentAlignment = Alignment.Center
@@ -255,9 +238,9 @@ fun ProfileScreen(
 
                         Text(
                             text = when {
-                                profileViewModel.role == "FOOD_PROVIDER" && profileViewModel.restaurantName.isNotBlank() -> profileViewModel.restaurantName
-                                profileViewModel.role == "FOOD_SAVER" && profileViewModel.name.isNotBlank() -> profileViewModel.name
-                                profileViewModel.isLoading -> "Loading..."
+                                vm.role == "FOOD_PROVIDER" && vm.restaurantName.isNotBlank() -> vm.restaurantName
+                                vm.role == "FOOD_SAVER" && vm.name.isNotBlank() -> vm.name
+                                vm.isLoading -> "Loading..."
                                 else -> "User"
                             },
                             style =
@@ -273,7 +256,7 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // ==============================
-        // Statistics - only for Food Saver (needs orderViewModel)
+        // Statistics - only for Food Saver
         // ==============================
 
         if (orderViewModel != null) {
@@ -438,7 +421,7 @@ fun ProfileScreen(
                     }
                 )
 
-                if (profileViewModel.role != "FOOD_PROVIDER"){
+                if (vm.role != "FOOD_PROVIDER"){
                     ListItem(
                         headlineContent = {
                             Text(text = "Achievement")

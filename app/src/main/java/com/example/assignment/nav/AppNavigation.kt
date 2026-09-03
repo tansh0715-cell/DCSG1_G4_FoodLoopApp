@@ -811,7 +811,9 @@ fun AppNavigation(
         }
 
         composable("PROFILE_PROVIDER") {
-
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = ProfileViewModelFactory(profileRepository, currentUserId)
+            )
             Scaffold(
                 bottomBar = {
                     AppNavigationBar(
@@ -822,6 +824,7 @@ fun AppNavigation(
             ) { innerPadding ->
 
                 ProfileScreen(
+                    vm = profileViewModel,
                     innerPadding = innerPadding,
                     navController = navController,
                     authRepository = authRepository,
@@ -831,7 +834,9 @@ fun AppNavigation(
         }
 
         composable("PROFILE_CONSUMER") {
-
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = ProfileViewModelFactory(profileRepository, currentUserId)
+            )
             val orderViewModel: OrderViewModel =
                 viewModel(
                     factory = OrderViewModelFactory(
@@ -852,6 +857,7 @@ fun AppNavigation(
             ) { innerPadding ->
 
                 ProfileScreen(
+                    vm = profileViewModel,
                     innerPadding = innerPadding,
                     navController = navController,
                     authRepository = authRepository,

@@ -292,5 +292,5 @@ fun ItemDetailScreen(
         )
     }
 
-    // Full-screen image viewer same as Profile avatar
+
 }
