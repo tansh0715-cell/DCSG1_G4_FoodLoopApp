@@ -78,6 +78,7 @@ fun AddItemScreen(
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                 val todayStartLocal = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+                    .plusDays(1)
                     .atStartOfDay(java.time.ZoneId.systemDefault())
                     .toInstant()
                     .toEpochMilli()
