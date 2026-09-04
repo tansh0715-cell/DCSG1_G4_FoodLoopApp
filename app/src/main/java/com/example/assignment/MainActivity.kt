@@ -51,14 +51,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // =========================
         // START NOTIFICATION WORKER
-        // =========================
         NotificationWorkerScheduler.start(this)
+        // Run notification / expired-order check immediately
+        NotificationWorkerScheduler.runNow(this)
 
-        // =========================
         // INITIALIZE
-        // =========================
         authRepository = AuthRepository()
         userPreferencesManager = UserPreferencesManager(this)
 
@@ -69,9 +67,7 @@ class MainActivity : ComponentActivity() {
             // Save NavController for onNewIntent()
             this@MainActivity.navController = navController
 
-            // =========================
             // GET USER ROLE
-            // =========================
             val userRoleFlow = userPreferencesManager.getUserRoleFlow()
             val userRole by userRoleFlow.collectAsState(initial = null)
 
@@ -81,14 +77,9 @@ class MainActivity : ComponentActivity() {
                 else -> "LOGIN"
             }
 
-            // =========================
-            // APP THEME
-            // =========================
+
             AssignmentTheme {
 
-                // =========================
-                // NAVIGATION
-                // =========================
                 AppNavigation(
                     navController = navController,
                     authRepository = authRepository,

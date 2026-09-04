@@ -114,4 +114,83 @@ class OrderRepository(
             .select { filter { eq("id", orderId) } }
             .decodeSingleOrNull()
     }
+
+    suspend fun cancelOrder(
+        orderId: String,
+        consumerId: String? = null,
+        providerId: String? = null
+    ) {
+        supabase
+            .postgrest["orders"]
+            .update(
+                {
+                    set("status", "CANCELLED")
+                }
+            ) {
+                filter {
+                    eq("id", orderId)
+
+                    if (!consumerId.isNullOrBlank()) {
+                        eq("consumer_id", consumerId)
+                    }
+
+                    if (!providerId.isNullOrBlank()) {
+                        eq("provider_id", providerId)
+                    }
+                }
+            }
+    }
+
+    suspend fun expireOrder(
+        orderId: String,
+        providerId: String
+    ) {
+        supabase
+            .postgrest["orders"]
+            .update(
+                {
+                    set("status", "CANCELLED")
+                    set("refund_status", "REFUND_PENDING")
+                }
+            ) {
+                filter {
+                    eq("id", orderId)
+                    eq("provider_id", providerId)
+                    eq("status", "PENDING")
+                }
+            }
+    }
+
+    suspend fun markRefunded(
+        orderId: String,
+        consumerId: String
+    ) {
+        supabase
+            .postgrest["orders"]
+            .update(
+                {
+                    set("refund_status", "REFUNDED")
+                }
+            ) {
+                filter {
+                    eq("id", orderId)
+                    eq("consumer_id", consumerId)
+                    eq("refund_status", "REFUND_PENDING")
+                }
+            }
+    }
+
+    suspend fun getOrdersByFoodId(
+        foodId: String
+    ): List<Order> {
+
+        return supabase
+            .postgrest["orders"]
+            .select {
+                filter {
+                    eq("food_id", foodId)
+                }
+            }
+            .decodeList<Order>()
+    }
 }

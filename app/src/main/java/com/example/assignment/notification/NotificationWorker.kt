@@ -7,7 +7,6 @@ import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.supabase.supabase
-import com.example.assignment.model.isPickupTimeEnded
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.first
 import java.time.Duration
@@ -40,7 +39,9 @@ class NotificationWorker(
                 "FOOD_SAVER" -> {
 
                     checkConsumerNotifications(
-                        userId = userId, orderRepository = orderRepository, eventStore = eventStore
+                        userId = userId,
+                        orderRepository = orderRepository,
+                        eventStore = eventStore
                     )
                 }
 
@@ -63,83 +64,72 @@ class NotificationWorker(
     }
 
     private suspend fun checkConsumerNotifications(
-        userId: String, orderRepository: OrderRepository, eventStore: NotificationEventStore
+        userId: String,
+        orderRepository: OrderRepository,
+        eventStore: NotificationEventStore
     ) {
 
-        val orders = orderRepository.getAllConsumerOrders(
-            userId
-        )
+        val orders =
+            orderRepository.getAllConsumerOrders(
+                userId
+            )
 
         for (order in orders) {
-            // 1. Provider marked order as completed
-            if (order.status.equals(
-                    "COMPLETED", ignoreCase = true
+
+            if (
+                !order.status.equals(
+                    "CANCELLED",
+                    ignoreCase = true
+                ) ||
+                !order.refundStatus.equals(
+                    "REFUND_PENDING",
+                    ignoreCase = true
                 )
             ) {
-
-                val eventId = "completed-${order.orderCode}"
-
-                if (!eventStore.hasBeenShown(
-                        eventId
-                    )
-                ) {
-
-                    NotificationHelper.showNotification(
-                        context = context,
-                        notificationId = eventId.hashCode(),
-                        title = "Food Collected",
-                        message = "Your food for order #${order.orderCode} has been successfully collected.",
-                        eventId = eventId,
-                        ownerId = userId,
-                        role = "FOOD_SAVER"
-                    )
-
-                    eventStore.markAsShown(
-                        eventId
-                    )
-                }
+                continue
             }
 
-            // 2. Pickup time has passed
-            if (!order.status.equals(
-                    "PENDING", ignoreCase = true
-                ) &&
-                order.isPickupTimeEnded()
+            val eventId =
+                "refund-${order.orderCode}"
+
+            if (
+                eventStore.hasBeenShown(eventId)
             ) {
+                continue
+            }
 
-                val eventId = "pickup-passed-${order.orderCode}"
+            val posted =
+                NotificationHelper.showNotification(
+                    context = context,
+                    notificationId =
+                        eventId.hashCode(),
+                    title = "Refund Processed",
+                    message =
+                        "Order #${order.orderCode} was canceled because the pickup time expired. Refund: RM ${
+                            String.format(
+                                "%.2f",
+                                order.totalPrice
+                            )
+                        }",
+                    eventId = eventId,
+                    ownerId = userId,
+                    role = "FOOD_SAVER"
+                )
 
-                if (!eventStore.hasBeenShown(eventId)) {
+            if (posted) {
 
-                    NotificationHelper.showNotification(
-                        context = context,
-                        notificationId =
-                            eventId.hashCode(),
-
-                        title =
-                            "Pickup Time Passed",
-
-                        message =
-                            "Order #${order.orderCode} was not collected. Refund: RM ${
-                                String.format(
-                                    "%.2f",
-                                    order.totalPrice
-                                )
-                            }",
-
-                        eventId =
-                            eventId,
-
-                        ownerId =
-                            order.consumerId,
-
-                        role =
-                            "FOOD_SAVER"
+                // First update database
+                runCatching {
+                    orderRepository.markRefunded(
+                        orderId = order.id,
+                        consumerId = userId
                     )
 
-                    eventStore.markAsShown(
-                        eventId
-                    )
+                    // Only mark event as shown after database update succeeds
+                    eventStore.markAsShown(eventId)
+
+                }.onFailure {
+                    it.printStackTrace()
                 }
             }
         }
@@ -152,157 +142,194 @@ class NotificationWorker(
         eventStore: NotificationEventStore
     ) {
 
-        // 1. New consumer orders
+        // New consumer orders
         val orders = orderRepository.getProviderOrders(
             userId
         )
-        // 2. Pickup time has passed
+        // Pickup time has passed
         for (order in orders) {
 
             if (
-                order.status.equals(
+                !order.status.equals(
                     "PENDING",
                     ignoreCase = true
-                ) &&
-                order.isPickupTimeEnded()
+                )
+            ) {
+                continue
+            }
+
+            val food = runCatching {
+                foodRepository.getFoodListingById(
+                    id = order.foodId
+                )
+            }.getOrNull()
+
+            if (
+                food != null &&
+                food.isPickupTimeEnded()
             ) {
 
                 val eventId =
                     "provider-order-canceled-${order.orderCode}"
 
                 if (
-                    !eventStore.hasBeenShown(
-                        eventId
-                    )
+                    !eventStore.hasBeenShown(eventId)
                 ) {
 
                     val posted =
                         NotificationHelper.showNotification(
-
                             context = context,
-
                             notificationId =
                                 eventId.hashCode(),
-
                             title =
                                 "Order Canceled",
-
                             message =
                                 "Order #${order.orderCode} was canceled because the pickup time expired.",
-
                             eventId =
                                 eventId,
-
                             ownerId =
                                 userId,
-
                             role =
                                 "FOOD_PROVIDER"
                         )
 
                     if (posted) {
-
                         eventStore.markAsShown(
                             eventId
                         )
                     }
                 }
+
+                // Change PENDING -> CANCELLED
+                // and mark refund as pending
+                runCatching {
+                    orderRepository.expireOrder(
+                        orderId = order.id,
+                        providerId = userId
+                    )
+                }.onFailure {
+                    it.printStackTrace()
+                }
             }
         }
 
+        // New order notifications
         for (order in orders) {
+
+            // Only PENDING orders can generate a new-order notification
+            if (
+                !order.status.equals(
+                    "PENDING",
+                    ignoreCase = true
+                )
+            ) {
+                continue
+            }
 
             val eventId = "new-order-${order.orderCode}"
 
-            //Only consider recent orders, prevent all old orders becoming notifications, after installing the new system
             val createdAt = runCatching {
-                Instant.parse(
-                    order.createdAt
-                )
+                Instant.parse(order.createdAt)
             }.getOrNull()
 
             if (createdAt != null) {
 
                 val minutesAgo = Duration.between(
-                    createdAt, Instant.now()
+                    createdAt,
+                    Instant.now()
                 ).toMinutes()
 
-                if (minutesAgo <= 15 && !eventStore.hasBeenShown(
-                        eventId
-                    )
+                if (
+                    minutesAgo in 0..15 &&
+                    !eventStore.hasBeenShown(eventId)
                 ) {
 
-                    NotificationHelper.showNotification(
-                        context = context,
-                        notificationId = eventId.hashCode(),
-                        title = "New Consumer Order",
-                        message = "Order #${order.orderCode} has been placed.",
-                        eventId = eventId,
-                        ownerId = userId,
-                        role = "FOOD_PROVIDER"
-                    )
+                    val posted =
+                        NotificationHelper.showNotification(
+                            context = context,
+                            notificationId = eventId.hashCode(),
+                            title = "New Consumer Order",
+                            message = "Order #${order.orderCode} has been placed.",
+                            eventId = eventId,
+                            ownerId = userId,
+                            role = "FOOD_PROVIDER"
+                        )
 
-                    eventStore.markAsShown(
-                        eventId
-                    )
+                    if (posted) {
+                        eventStore.markAsShown(eventId)
+                    }
                 }
             }
         }
 
-        // 2. Low stock / sold out
+        // Low stock / sold out
         val foods = foodRepository.getFoodListingByProvider(
             userId
         )
 
         for (food in foods) {
-
+            // Sold out
             if (food.quantity <= 0) {
 
-                val eventId = "sold-out-${food.id}"
+                val eventId =
+                    "sold-out-${food.id}"
 
-                if (!eventStore.hasBeenShown(
-                        eventId
-                    )
+                if (
+                    !eventStore.hasBeenShown(eventId)
                 ) {
 
-                    NotificationHelper.showNotification(
-                        context = context,
-                        notificationId = eventId.hashCode(),
-                        title = "Food Sold Out",
-                        message = "${food.name} is sold out.",
-                        eventId = eventId,
-                        ownerId = userId,
-                        role = "FOOD_PROVIDER"
-                    )
-
-                    eventStore.markAsShown(
-                        eventId
-                    )
-                }
-
-            } else if (food.quantity <= 5) {
-
-                val eventId = "low-stock-${food.id}"
-
-                if (!eventStore.hasBeenShown(
-                        eventId
-                    )
-                ) {
-
-                    val posted = NotificationHelper.showNotification(
-                        context = context,
-                        notificationId = eventId.hashCode(),
-                        title = "Low Stock Alert",
-                        message = "${food.name} has only ${food.quantity} item(s) left.",
-                        eventId = eventId,
-                        ownerId = userId,
-                        role = "FOOD_PROVIDER"
-                    )
+                    val posted =
+                        NotificationHelper.showNotification(
+                            context = context,
+                            notificationId =
+                                eventId.hashCode(),
+                            title =
+                                "Food Sold Out",
+                            message =
+                                "${food.name} is sold out.",
+                            eventId =
+                                eventId,
+                            ownerId =
+                                userId,
+                            role =
+                                "FOOD_PROVIDER"
+                        )
 
                     if (posted) {
                         eventStore.markAsShown(
                             eventId
                         )
+                    }
+                }
+
+            } else if (food.quantity <= 5) {
+
+                val eventId =
+                    "low-stock-${food.id}"
+
+                if (
+                    !eventStore.hasBeenShown(eventId)
+                ) {
+
+                    val posted =
+                        NotificationHelper.showNotification(
+                            context = context,
+                            notificationId =
+                                eventId.hashCode(),
+                            title =
+                                "Low Stock Alert",
+                            message =
+                                "${food.name} has only ${food.quantity} item(s) left.",
+                            eventId =
+                                eventId,
+                            ownerId =
+                                userId,
+                            role =
+                                "FOOD_PROVIDER"
+                        )
+
+                    if (posted) {
+                        eventStore.markAsShown(eventId)
                     }
                 }
             }

@@ -8,7 +8,6 @@ import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.model.FoodListing
 import com.example.assignment.model.Order
 import com.example.assignment.model.Restaurant
-import com.example.assignment.model.isPickupTimeEnded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,25 +76,43 @@ class OrderViewModel(
             _isLoading.value = true
 
             try {
-                val loadedOrders = repository.getConsumerOrders(
-                    currentUserId
-                )
+                val loadedOrders =
+                    repository.getConsumerOrders(
+                        currentUserId
+                    )
 
-                val activeOrders = loadedOrders.filter { order ->
+                val activeOrders =
+                    loadedOrders.filter { order ->
 
-                    order.status.equals(
-                        "PENDING", ignoreCase = true
-                    ) && !order.isPickupTimeEnded()
-                }
+                        if (
+                            !order.status.equals(
+                                "PENDING",
+                                ignoreCase = true
+                            )
+                        ) {
+                            return@filter false
+                        }
+
+                        val food = runCatching {
+                            foodRepository.getFoodListingById(
+                                id = order.foodId
+                            )
+                        }.getOrNull()
+
+                        food != null &&
+                                !food.isPickupTimeEnded()
+                    }
 
                 _orders.value = activeOrders
 
                 loadConsumerRelatedData(
                     activeOrders
                 )
+
             } catch (e: Exception) {
                 e.printStackTrace()
                 _orders.value = emptyList()
+
             } finally {
                 _isLoading.value = false
             }
@@ -215,7 +232,6 @@ class OrderViewModel(
         }
     }
 
-    //ADD
     fun loadProviderOrders() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -226,17 +242,30 @@ class OrderViewModel(
                         currentUserId
                     )
 
-                val activeOrders = loadedOrders.filter { order ->
+                val activeOrders =
+                    loadedOrders.filter { order ->
 
-                    order.status.equals(
-                        "PENDING", ignoreCase = true
-                    ) && !order.isPickupTimeEnded()
-                }
+                        if (
+                            !order.status.equals(
+                                "PENDING",
+                                ignoreCase = true
+                            )
+                        ) {
+                            return@filter false
+                        }
+
+                        val food = runCatching {
+                            foodRepository.getFoodListingById(
+                                id = order.foodId
+                            )
+                        }.getOrNull()
+
+                        food != null &&
+                                !food.isPickupTimeEnded()
+                    }
 
                 _orders.value = activeOrders
 
-                // Load food and restaurant information
-                // only for active orders.
                 loadConsumerRelatedData(
                     activeOrders
                 )
