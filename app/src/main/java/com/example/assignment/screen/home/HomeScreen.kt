@@ -768,7 +768,7 @@ fun ProviderHomeScreen(
                             Modifier.weight(1f),
                         title = "Reservations",
                         value =
-                            uiState.reservationCount
+                            uiState.activeOrderCount
                                 .toString(),
                         iconRes =
                             R.drawable.order_svgrepo_com

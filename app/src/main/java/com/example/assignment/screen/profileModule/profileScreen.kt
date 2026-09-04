@@ -50,7 +50,9 @@ import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.AuthRepository
 import com.example.assignment.viewmodel.order.OrderViewModel
 import com.example.assignment.viewmodel.profile.ProfileViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ProfileScreen(
@@ -502,11 +504,14 @@ fun ProfileScreen(
 
 
                 // ==============================
-                // Logout
-                // ==============================
+// Logout
+// ==============================
                 ListItem(
                     headlineContent = {
-                        Text(text = "Logout", color = MaterialTheme.colorScheme.error)
+                        Text(
+                            text = "Logout",
+                            color = MaterialTheme.colorScheme.error
+                        )
                     },
                     leadingContent = {
                         Icon(
@@ -515,18 +520,27 @@ fun ProfileScreen(
                             tint = MaterialTheme.colorScheme.error
                         )
                     },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+                    colors = ListItemDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    ),
                     modifier = Modifier.clickable {
                         scope.launch {
                             try {
-                                authRepository.logout()
+                                withContext(Dispatchers.IO) {
+                                    authRepository.logout()
+                                }
+
                                 userPreferencesManager.clear()
+
                                 navController.navigate("LOGIN") {
                                     popUpTo(0) { inclusive = true }
                                 }
+
                             } catch (e: Exception) {
                                 e.printStackTrace()
+
                                 userPreferencesManager.clear()
+
                                 navController.navigate("LOGIN") {
                                     popUpTo(0) { inclusive = true }
                                 }

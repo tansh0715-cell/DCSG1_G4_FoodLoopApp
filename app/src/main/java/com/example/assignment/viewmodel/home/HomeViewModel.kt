@@ -11,6 +11,9 @@ import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.data.supabase.supabase
 import com.example.assignment.model.FoodListing
+import com.example.assignment.model.Order
+import com.example.assignment.notification.NotificationEventStore
+import com.example.assignment.notification.NotificationHelper
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +24,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -48,7 +53,7 @@ data class  HomeUiState(
     //provider restaurant information
     val restaurantName: String? = null,
     //num of provider orders/resevations
-    val reservationCount: Int = 0,
+    val activeOrderCount: Int = 0,
 
     //provider dashboard statistics
     val totalFoodCount: Int = 0,
@@ -77,6 +82,63 @@ class HomeViewModel(
 
     fun loadAllFoods() {
         loadFoods(providerId = null)
+    }
+
+    private fun isOrderPickupTimeEnded(
+        order: Order
+    ): Boolean {
+        return try {
+
+            val formatter = DateTimeFormatter.ofPattern(
+                "h:mm a",
+                Locale.ENGLISH
+            )
+
+            val parts = order.pickupTime.split(" - ")
+
+            if (parts.size != 2) {
+                return false
+            }
+
+            val start = LocalTime.parse(
+                parts[0].trim(),
+                formatter
+            )
+
+            val end = LocalTime.parse(
+                parts[1].trim(),
+                formatter
+            )
+
+            val orderDate =
+                Instant.parse(order.createdAt)
+                    .atZone(
+                        ZoneId.of("Asia/Kuala_Lumpur")
+                    )
+                    .toLocalDate()
+
+            val endDate =
+                if (end.isBefore(start)) {
+                    orderDate.plusDays(1)
+                } else {
+                    orderDate
+                }
+
+            val pickupEndDateTime =
+                LocalDateTime.of(
+                    endDate,
+                    end
+                )
+
+            LocalDateTime.now(
+                ZoneId.of("Asia/Kuala_Lumpur")
+            ).isAfter(
+                pickupEndDateTime
+            )
+
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun loadProviderHome(providerId: String) {
@@ -114,7 +176,13 @@ class HomeViewModel(
                     orderRepository.getProviderOrders(providerId)
                 }
 
-                val reservationCount = providerOrders.size
+                val activeOrderCount =
+                    providerOrders.count { order ->
+                        order.status.equals(
+                            "PENDING",
+                            ignoreCase = true
+                        ) && !isOrderPickupTimeEnded(order)
+                    }
 
                 val now = Instant.now()
                 val localNow = LocalTime.now()
@@ -254,7 +322,7 @@ class HomeViewModel(
                         isLoading = false,
                         foods = filteredFoods,
                         restaurantName = provider?.restaurantName?: restaurant?.name,
-                        reservationCount = reservationCount,
+                        activeOrderCount = activeOrderCount,
                         totalFoodCount = totalFoodCount,
                         activeFoodCount = activeFoodCount,
                         hasProviderNotifications = hasProviderNotifications,
@@ -266,7 +334,7 @@ class HomeViewModel(
                     it.copy(
                         isLoading = false,
                         foods = emptyList(),
-                        reservationCount = 0,
+                        activeOrderCount = 0,
                         totalFoodCount = 0,
                         activeFoodCount = 0,
                         errorMessage = e.message ?: "Failed to load provider dashboard"
@@ -870,9 +938,31 @@ class HomeViewModel(
 
                             if (hoursPassed in 0..1440) {
 
-                                notificationIds.add(
+                                val eventId =
                                     "completed-${order.orderCode}"
-                                )
+
+                                // Keep the existing red-dot logic
+                                notificationIds.add(eventId)
+
+                                // Create the actual Food Collected notification
+                                val eventStore =
+                                    NotificationEventStore(context)
+
+                                if (!eventStore.hasBeenShown(eventId)) {
+
+                                    NotificationHelper.showNotification(
+                                        context = context,
+                                        notificationId = eventId.hashCode(),
+                                        title = "Food Collected",
+                                        message =
+                                            "Your order #${order.orderCode} has been successfully collected.",
+                                        eventId = eventId,
+                                        ownerId = userId,
+                                        role = "FOOD_SAVER"
+                                    )
+
+                                    eventStore.markAsShown(eventId)
+                                }
                             }
                         }
                     }
