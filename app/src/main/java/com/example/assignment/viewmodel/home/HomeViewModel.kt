@@ -209,7 +209,7 @@ class HomeViewModel(
                                 runCatching {
 
                                     val createdAt =
-                                        java.time.Instant.parse(
+                                        Instant.parse(
                                             order.createdAt
                                         )
 
@@ -555,7 +555,7 @@ class HomeViewModel(
                             order.completedAt
                                 ?.let {
                                     runCatching {
-                                        java.time.Instant.parse(it)
+                                        Instant.parse(it)
                                     }.getOrNull()
                                 }
 
@@ -924,7 +924,7 @@ class HomeViewModel(
                             order.completedAt
                                 ?.let {
                                     runCatching {
-                                        java.time.Instant.parse(it)
+                                        Instant.parse(it)
                                     }.getOrNull()
                                 }
 

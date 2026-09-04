@@ -83,12 +83,43 @@ class NotificationWorker(
 
         for (order in orders) {
 
+            // =========================================
+            // 1. Handle expired pickup
+            // =========================================
+
             if (
-                !order.status.equals(
+                order.status.equals("PENDING", ignoreCase = true) &&
+                isOrderPickupTimeEnded(order)
+            ) {
+                runCatching {
+                    orderRepository.expireOrder(
+                        orderId = order.id,
+                        providerId = order.providerId
+                    )
+                }.onFailure {
+                    it.printStackTrace()
+                }
+            }
+
+            // =========================================
+            // 2. Get latest order status
+            // =========================================
+
+            val updatedOrder =
+                orderRepository.getOrderById(
+                    order.id
+                ) ?: continue
+
+            // =========================================
+            // 3. Refund notification
+            // =========================================
+
+            if (
+                !updatedOrder.status.equals(
                     "CANCELLED",
                     ignoreCase = true
                 ) ||
-                !order.refundStatus.equals(
+                !updatedOrder.refundStatus.equals(
                     "REFUND_PENDING",
                     ignoreCase = true
                 )
@@ -97,7 +128,7 @@ class NotificationWorker(
             }
 
             val eventId =
-                "refund-${order.orderCode}"
+                "refund-${updatedOrder.orderCode}"
 
             if (
                 eventStore.hasBeenShown(eventId)
@@ -112,10 +143,10 @@ class NotificationWorker(
                         eventId.hashCode(),
                     title = "Refund Processed",
                     message =
-                        "Order #${order.orderCode} was canceled because the pickup time expired. Refund: RM ${
+                        "Order #${updatedOrder.orderCode} was canceled because the pickup time expired. Refund: RM ${
                             String.format(
                                 "%.2f",
-                                order.totalPrice
+                                updatedOrder.totalPrice
                             )
                         }",
                     eventId = eventId,
@@ -125,15 +156,16 @@ class NotificationWorker(
 
             if (posted) {
 
-                // First update database
                 runCatching {
+
                     orderRepository.markRefunded(
-                        orderId = order.id,
+                        orderId = updatedOrder.id,
                         consumerId = userId
                     )
 
-                    // Only mark event as shown after database update succeeds
-                    eventStore.markAsShown(eventId)
+                    eventStore.markAsShown(
+                        eventId
+                    )
 
                 }.onFailure {
                     it.printStackTrace()

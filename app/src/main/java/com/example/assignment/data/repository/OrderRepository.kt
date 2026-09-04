@@ -146,21 +146,14 @@ class OrderRepository(
         providerId: String
     ) {
         supabase
-            .postgrest["orders"]
-            .update(
-                {
-                    set("status", "CANCELLED")
-                    set("refund_status", "REFUND_PENDING")
-                }
-            ) {
-                filter {
-                    eq("id", orderId)
-                    eq("provider_id", providerId)
-                    eq("status", "PENDING")
-                }
-            }
+            .postgrest
+            .rpc(
+                "expire_order",
+                mapOf(
+                    "p_order_id" to orderId
+                )
+            )
     }
-
     suspend fun markRefunded(
         orderId: String,
         consumerId: String

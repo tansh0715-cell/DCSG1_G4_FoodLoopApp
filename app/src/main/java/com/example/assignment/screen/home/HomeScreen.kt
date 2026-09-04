@@ -166,6 +166,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
+        NotificationWorkerScheduler.runNow(context)
 
         viewModel.loadAllFoods()
 
