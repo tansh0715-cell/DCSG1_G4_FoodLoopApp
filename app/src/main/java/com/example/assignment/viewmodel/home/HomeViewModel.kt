@@ -90,26 +90,30 @@ class HomeViewModel(
 
             try {
                 // Get foods belonging to this provider
-                allFoods = foodRepository
-                    .getFoodListingByProvider(providerId)
-
-                // Calculate Provider Dashboard statics
-                val totalFoodCount = allFoods.size
-                val activeFoodCount = allFoods.count{ food ->
-                    food.quantity > 0
+                allFoods = withContext(Dispatchers.IO) {
+                    foodRepository.getFoodListingByProvider(providerId)
                 }
 
-                // Get provider's restaurant
-                val restaurant = restaurantRepository
-                    .getRestaurantByProvider(providerId)
-                val provider = authRepository
-                    .getFoodProvider(providerId)
+                val totalFoodCount = allFoods.size
 
-                // Get provider orders and use the count
-                val providerOrders = orderRepository
-                    .getProviderOrders(
-                        providerId
-                    )
+                val activeFoodCount =
+                    allFoods.count { food ->
+                        food.quantity > 0 &&
+                                !food.isPickupTimeEnded()
+                    }
+
+                val restaurant = withContext(Dispatchers.IO) {
+                    restaurantRepository.getRestaurantByProvider(providerId)
+                }
+
+                val provider = withContext(Dispatchers.IO) {
+                    authRepository.getFoodProvider(providerId)
+                }
+
+                val providerOrders = withContext(Dispatchers.IO) {
+                    orderRepository.getProviderOrders(providerId)
+                }
+
                 val reservationCount = providerOrders.size
 
                 val now = Instant.now()
@@ -602,7 +606,7 @@ class HomeViewModel(
 
                 val activeFoodCount =
                     allFoods.count {
-                        it.quantity > 0
+                        it.quantity > 0 && !it.isPickupTimeEnded()
                     }
                 applyCategoryFilter(_uiState.value.selectedCategoryIndex)
 
@@ -635,10 +639,12 @@ class HomeViewModel(
         viewModelScope.launch {
             try {
 
-                val food = foodRepository.getFoodListingById(
-                    id = foodId,
-                    providerId = providerId
-                )
+                val food = withContext(Dispatchers.IO) {
+                    foodRepository.getFoodListingById(
+                        id = foodId,
+                        providerId = providerId
+                    )
+                }
 
                 if (food == null) {
                     _uiState.update {
@@ -648,10 +654,28 @@ class HomeViewModel(
                     }
                     return@launch
                 }
-                foodRepository.deleteFoodListing(
-                    foodId = foodId,
-                    providerId = providerId
-                )
+
+                val isSoldOut = food.quantity <= 0
+                val isExpired = food.isPickupTimeEnded()
+
+                val canDelete = isSoldOut || isExpired
+
+                if (!canDelete) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage =
+                                "Food can only be deleted when it is sold out or expired."
+                        )
+                    }
+                    return@launch
+                }
+
+                withContext(Dispatchers.IO) {
+                    foodRepository.deleteFoodListing(
+                        foodId = foodId,
+                        providerId = providerId
+                    )
+                }
 
                 loadProviderHome(providerId)
 
@@ -698,10 +722,6 @@ class HomeViewModel(
         latitude: Double,
         longitude: Double
     ) {
-        println(
-            "LOCATION DEBUG → lat=$latitude, lon=$longitude"
-        )
-
         _uiState.update {
             it.copy(
                 userLatitude = latitude,
@@ -715,10 +735,6 @@ class HomeViewModel(
 
         // First location update
         if (oldLat == null || oldLon == null) {
-
-            println(
-                "NEARBY DEBUG → First location update, loading restaurants"
-            )
 
             loadNearbyRestaurants(
                 latitude,
@@ -738,16 +754,7 @@ class HomeViewModel(
             }
         )
 
-        println(
-            "NEARBY DEBUG → Moved ${distance}m"
-        )
-
         if (distance >= 200f) {
-
-            println(
-                "NEARBY DEBUG → More than 200m, refreshing"
-            )
-
             loadNearbyRestaurants(
                 latitude,
                 longitude
@@ -787,11 +794,6 @@ class HomeViewModel(
                 }
 
             } catch (e: Exception) {
-
-                println(
-                    "NEARBY DEBUG → ERROR: ${e.message}"
-                )
-
                 e.printStackTrace()
 
                 _uiState.update {

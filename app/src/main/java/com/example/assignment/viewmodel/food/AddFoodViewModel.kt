@@ -8,6 +8,7 @@ import com.example.assignment.data.repository.RestaurantRepository
 import com.example.assignment.model.FoodListing
 import com.example.assignment.state.AddFoodEvent
 import com.example.assignment.state.AddFoodUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -190,10 +192,12 @@ class AddFoodViewModel(
         editingFoodId = foodId
         viewModelScope.launch {
             try {
-                val food = repository.getFoodListingById(
-                    id = foodId,
-                    providerId = currentProviderId
-                )
+                val food = withContext(Dispatchers.IO) {
+                    repository.getFoodListingById(
+                        id = foodId,
+                        providerId = currentProviderId
+                    )
+                }
                 if(food!=null) {
                     val canEdit = food.quantity <= 0 || food.isPickupTimeEnded()
 
@@ -330,33 +334,7 @@ class AddFoodViewModel(
                 return null
             }
 
-            val formatter = DateTimeFormatter.ofPattern(
-                "hh:mm a",
-                Locale.ENGLISH
-            )
-
-            val start = LocalTime.parse(
-                parts[0].trim(),
-                formatter
-            )
-
-            val today = now.toLocalDate()
-            val currentTime = now.toLocalTime()
-
-            /*
-             * The user does NOT enter the pickup date.
-             *
-             * The system determines it from the current
-             * date and the selected pickup start time.
-             */
-            val pickupDate =
-                if (start.isAfter(currentTime)) {
-                    today
-                } else {
-                    today.plusDays(1)
-                }
-
-            pickupDate.toString()
+            now.toLocalDate().toString()
 
         } catch (e: Exception) {
             null
@@ -391,13 +369,9 @@ class AddFoodViewModel(
             val today = LocalDate.now()
 
             // --------------------------------
-            // 1. Determine start date
+            // 1. Pickup starts today
             // --------------------------------
-            var startDate = today
-
-            if (!start.isAfter(now.toLocalTime())) {
-                startDate = today.plusDays(1)
-            }
+            val startDate = today
 
             val startDateTime = LocalDateTime.of(
                 startDate,
@@ -407,15 +381,15 @@ class AddFoodViewModel(
             // --------------------------------
             // 2. Determine end date
             // --------------------------------
-            var endDate = startDate
-
-            // Example:
-            // 11:00 PM - 1:00 AM
-            // end time is earlier than start time,
-            // so the end is on the next day.
-            if (end.isBefore(start)) {
-                endDate = startDate.plusDays(1)
-            }
+            val endDate =
+                if (end.isBefore(start)) {
+                    // Example:
+                    // 11:00 PM - 1:00 AM
+                    // End time is on the next day.
+                    startDate.plusDays(1)
+                } else {
+                    startDate
+                }
 
             val endDateTime = LocalDateTime.of(
                 endDate,
@@ -545,55 +519,56 @@ class AddFoodViewModel(
         viewModelScope.launch {
             try {
 
-                // Upload image inside coroutine because uploadFoodImage() is suspend
-                val imageUrl =
-                    if (imageBytes != null) {
-                        repository.uploadFoodImage(
-                            providerId = currentProviderId,
-                            foodId = foodId,
-                            imageBytes = imageBytes
+                val result = withContext(Dispatchers.IO){
+                    // Upload image inside coroutine because uploadFoodImage() is suspend
+                    val imageUrl =
+                        if (imageBytes != null) {
+                            repository.uploadFoodImage(
+                                providerId = currentProviderId,
+                                foodId = foodId,
+                                imageBytes = imageBytes
+                            )
+                        } else {
+                            currentState.imageUrl
+                        }
+
+                    val restaurantId = repository.getRestaurantIdByProvider(
+                        currentProviderId
+                    )
+
+                    if (restaurantId == null) {
+                        _uiEvent.trySend(
+                            AddFoodEvent.ShowToast(
+                                "No restaurant found for this provider"
+                            )
                         )
-                    } else {
-                        currentState.imageUrl
                     }
 
-                val restaurantId = repository.getRestaurantIdByProvider(
-                    currentProviderId
-                )
-
-                if (restaurantId == null) {
-                    _uiEvent.trySend(
-                        AddFoodEvent.ShowToast(
-                            "No restaurant found for this provider"
+                    // Create FoodListing
+                    val food = FoodListing(
+                        id = foodId,
+                        providerId = currentProviderId,
+                        restaurant = restaurantId,
+                        name = currentState.foodName.trim(),
+                        category = currentState.selectedCategory,
+                        description = currentState.description
+                            .trim()
+                            .ifBlank { null },
+                        quantity = qtyInt,
+                        pickupDate = pickupDate,
+                        pickupTime = currentState.pickupTime,
+                        originalPrice = originalPrice,
+                        discountPercentage = discount,
+                        imageUrl = imageUrl,
+                        price = FoodListing.calculateFinalPrice(
+                            originalPrice,
+                            discount
                         )
                     )
-                    return@launch
+
+                    // Save to Supabase
+                    repository.upsertFoodListing(food)
                 }
-
-                // Create FoodListing
-                val food = FoodListing(
-                    id = foodId,
-                    providerId = currentProviderId,
-                    restaurant = restaurantId,
-                    name = currentState.foodName.trim(),
-                    category = currentState.selectedCategory,
-                    description = currentState.description
-                        .trim()
-                        .ifBlank { null },
-                    quantity = qtyInt,
-                    pickupDate = pickupDate,
-                    pickupTime = currentState.pickupTime,
-                    originalPrice = originalPrice,
-                    discountPercentage = discount,
-                    imageUrl = imageUrl,
-                    price = FoodListing.calculateFinalPrice(
-                        originalPrice,
-                        discount
-                    )
-                )
-
-                // Save to Supabase
-                repository.upsertFoodListing(food)
 
                 val message = if (editingFoodId == null) {
                     "Food published successfully!"

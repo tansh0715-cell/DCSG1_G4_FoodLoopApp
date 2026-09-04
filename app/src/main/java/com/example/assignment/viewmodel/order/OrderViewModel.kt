@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.time.LocalDateTime
 
 class OrderViewModel(
     private val repository: OrderRepository,
@@ -71,15 +77,76 @@ class OrderViewModel(
     private val _isHistoryLoading = MutableStateFlow(false)
     val isHistoryLoading = _isHistoryLoading.asStateFlow()
 
+    private fun isOrderPickupTimeEnded(
+        order: Order
+    ): Boolean {
+        return try {
+
+            val formatter = DateTimeFormatter.ofPattern(
+                "h:mm a",
+                Locale.ENGLISH
+            )
+
+            val parts = order.pickupTime.split(" - ")
+
+            if (parts.size != 2) {
+                return false
+            }
+
+            val start = LocalTime.parse(
+                parts[0].trim(),
+                formatter
+            )
+
+            val end = LocalTime.parse(
+                parts[1].trim(),
+                formatter
+            )
+
+            // Order was created on this date.
+            // The food's original pickup date was the same day.
+            val orderDate =
+                Instant.parse(order.createdAt)
+                    .atZone(
+                        ZoneId.of("Asia/Kuala_Lumpur")
+                    )
+                    .toLocalDate()
+
+            val endDate =
+                if (end.isBefore(start)) {
+                    orderDate.plusDays(1)
+                } else {
+                    orderDate
+                }
+
+            val pickupEndDateTime =
+                LocalDateTime.of(
+                    endDate,
+                    end
+                )
+
+            LocalDateTime.now(
+                ZoneId.of("Asia/Kuala_Lumpur")
+            ).isAfter(
+                pickupEndDateTime
+            )
+
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun loadConsumerOrders() {
         viewModelScope.launch {
             _isLoading.value = true
 
             try {
                 val loadedOrders =
-                    repository.getConsumerOrders(
-                        currentUserId
-                    )
+                    withContext(Dispatchers.IO) {
+                        repository.getConsumerOrders(
+                            currentUserId
+                        )
+                    }
 
                 val activeOrders =
                     loadedOrders.filter { order ->
@@ -93,14 +160,7 @@ class OrderViewModel(
                             return@filter false
                         }
 
-                        val food = runCatching {
-                            foodRepository.getFoodListingById(
-                                id = order.foodId
-                            )
-                        }.getOrNull()
-
-                        food != null &&
-                                !food.isPickupTimeEnded()
+                        !isOrderPickupTimeEnded(order)
                     }
 
                 _orders.value = activeOrders
@@ -128,12 +188,19 @@ class OrderViewModel(
 
         orders.forEach { order ->
 
-            foodRepository.getFoodListingById(order.foodId)?.let { food ->
-                foods[order.id] = food
-            }
+            withContext(Dispatchers.IO) {
 
-            restaurantRepository.getRestaurantById(order.restaurantId)?.let { restaurant ->
-                restaurants[order.id] = restaurant
+                foodRepository.getFoodListingById(
+                    order.foodId
+                )?.let {
+                    foods[order.id] = it
+                }
+
+                restaurantRepository.getRestaurantById(
+                    order.restaurantId
+                )?.let {
+                    restaurants[order.id] = it
+                }
             }
         }
 
@@ -145,37 +212,69 @@ class OrderViewModel(
         orderId: String
     ){
         viewModelScope.launch {
+
             try {
-                // Try consumer pending orders first
-                var found: Order? = null
-                try {
-                    val consumerOrders = repository.getConsumerOrders(currentUserId)
-                    found = consumerOrders.firstOrNull { it.id == orderId }
-                } catch (_: Exception) {}
-                // Fallback to all consumer orders (includes COMPLETED)
-                if (found == null) {
+
+                val found = withContext(Dispatchers.IO) {
+
+                    var result: Order? = null
+
                     try {
-                        val allConsumer = repository.getAllConsumerOrders(currentUserId)
-                        found = allConsumer.firstOrNull { it.id == orderId }
-                    } catch (_: Exception) {}
+                        val consumerOrders =
+                            repository.getConsumerOrders(
+                                currentUserId
+                            )
+
+                        result =
+                            consumerOrders.firstOrNull {
+                                it.id == orderId
+                            }
+                    } catch (_: Exception) {
+                    }
+
+                    if (result == null) {
+                        try {
+                            val allConsumer =
+                                repository.getAllConsumerOrders(
+                                    currentUserId
+                                )
+
+                            result =
+                                allConsumer.firstOrNull {
+                                    it.id == orderId
+                                }
+                        } catch (_: Exception) {
+                        }
+                    }
+
+                    if (result == null) {
+                        try {
+                            val providerOrders =
+                                repository.getProviderOrders(
+                                    currentUserId
+                                )
+
+                            result =
+                                providerOrders.firstOrNull {
+                                    it.id == orderId
+                                }
+                        } catch (_: Exception) {
+                        }
+                    }
+
+                    if (result == null) {
+                        result =
+                            repository.getOrderById(orderId)
+                    }
+
+                    result
                 }
-                // Fallback to provider orders
-                if (found == null) {
-                    try {
-                        val providerOrders = repository.getProviderOrders(currentUserId)
-                        found = providerOrders.firstOrNull { it.id == orderId }
-                    } catch (_: Exception) {}
-                }
-                // Last fallback direct fetch
-                if (found == null) {
-                    found = repository.getOrderById(orderId)
-                }
+
                 _selectedOrder.value = found
 
             } catch (e: Exception) {
 
                 e.printStackTrace()
-
                 _selectedOrder.value = null
             }
         }
@@ -184,23 +283,37 @@ class OrderViewModel(
     //load order detail
     fun loadOrderDetails(order: Order){
         viewModelScope.launch {
-            _isDetailLoading.value = true
-            try{
-                //find the food listing using foodId
-                _selectedFood.value = foodRepository.getFoodListingById(
-                    id = order.foodId
-                )
 
-                //find the restaurnt using restaurantId
-                _selectedRestaurant.value = restaurantRepository.getRestaurantById(
-                    restaurantId = order.restaurantId
-                )
-            } catch (e: Exception){
+            _isDetailLoading.value = true
+
+            try {
+
+                val food =
+                    withContext(Dispatchers.IO) {
+                        foodRepository.getFoodListingById(
+                            id = order.foodId
+                        )
+                    }
+
+                val restaurant =
+                    withContext(Dispatchers.IO) {
+                        restaurantRepository.getRestaurantById(
+                            restaurantId = order.restaurantId
+                        )
+                    }
+
+                _selectedFood.value = food
+                _selectedRestaurant.value = restaurant
+
+            } catch (e: Exception) {
+
                 e.printStackTrace()
 
                 _selectedFood.value = null
                 _selectedRestaurant.value = null
+
             } finally {
+
                 _isDetailLoading.value = false
             }
         }
@@ -238,9 +351,11 @@ class OrderViewModel(
 
             try {
                 val loadedOrders =
-                    repository.getProviderOrders(
-                        currentUserId
-                    )
+                    withContext(Dispatchers.IO) {
+                        repository.getProviderOrders(
+                            currentUserId
+                        )
+                    }
 
                 val activeOrders =
                     loadedOrders.filter { order ->
@@ -254,14 +369,7 @@ class OrderViewModel(
                             return@filter false
                         }
 
-                        val food = runCatching {
-                            foodRepository.getFoodListingById(
-                                id = order.foodId
-                            )
-                        }.getOrNull()
-
-                        food != null &&
-                                !food.isPickupTimeEnded()
+                        !isOrderPickupTimeEnded(order)
                     }
 
                 _orders.value = activeOrders
@@ -292,54 +400,62 @@ class OrderViewModel(
 
             try {
 
-                // Get the latest order from database
-                val order = repository.getOrderById(orderId)
-                    ?: throw IllegalArgumentException("Order not found.")
+                val result = withContext(Dispatchers.IO) {
 
-                val enteredCode =
-                    pickupCode.trim().uppercase()
+                    // Get the latest order from database
+                    val order =
+                        repository.getOrderById(orderId)
+                            ?: throw IllegalArgumentException(
+                                "Order not found."
+                            )
 
-                val expectedCode =
-                    order.pickupCode.trim().uppercase()
+                    val enteredCode =
+                        pickupCode.trim().uppercase()
 
-                // Validate BEFORE calling RPC
-                if (enteredCode != expectedCode) {
-                    throw IllegalArgumentException(
-                        "Invalid pickup code."
-                    )
-                }
+                    val expectedCode =
+                        order.pickupCode.trim().uppercase()
 
-                // Correct code -> call RPC
-                val updatedOrder =
-                    repository.markOrderDone(
-                        orderId = orderId,
-                        providerId = currentUserId,
-                        pickupCode = enteredCode
-                    )
+                    // Validate BEFORE calling RPC
+                    if (enteredCode != expectedCode) {
+                        throw IllegalArgumentException(
+                            "Invalid pickup code."
+                        )
+                    }
 
-                // Make sure database really changed to COMPLETED
-                if (
-                    updatedOrder == null ||
-                    !updatedOrder.status.equals(
-                        "COMPLETED",
-                        ignoreCase = true
-                    )
-                ) {
-                    throw IllegalStateException(
-                        "Order could not be completed."
-                    )
+                    // Correct code -> call RPC
+                    val updatedOrder =
+                        repository.markOrderDone(
+                            orderId = orderId,
+                            providerId = currentUserId,
+                            pickupCode = enteredCode
+                        )
+
+                    // Make sure database really changed
+                    if (
+                        updatedOrder == null ||
+                        !updatedOrder.status.equals(
+                            "COMPLETED",
+                            ignoreCase = true
+                        )
+                    ) {
+                        throw IllegalStateException(
+                            "Order could not be completed."
+                        )
+                    }
+
+                    updatedOrder
                 }
 
                 // Reload provider orders
                 loadProviderOrders()
 
-                onSuccess()
+                withContext(Dispatchers.Main.immediate) {
+                    onSuccess()
+                }
 
             } catch (e: Exception) {
 
-                withContext(
-                    Dispatchers.Main.immediate
-                ) {
+                withContext(Dispatchers.Main.immediate) {
                     onError(e)
                 }
             }

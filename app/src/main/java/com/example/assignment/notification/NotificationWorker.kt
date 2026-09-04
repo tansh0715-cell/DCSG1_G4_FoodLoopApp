@@ -7,10 +7,17 @@ import com.example.assignment.data.UserPreferencesManager
 import com.example.assignment.data.repository.FoodRepository
 import com.example.assignment.data.repository.OrderRepository
 import com.example.assignment.data.supabase.supabase
+import com.example.assignment.model.Order
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.first
 import java.time.Duration
 import java.time.Instant
+import java.time.Instant.parse
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class NotificationWorker(
     appContext: Context, workerParams: WorkerParameters
@@ -135,6 +142,61 @@ class NotificationWorker(
         }
     }
 
+    private fun isOrderPickupTimeEnded(
+        order: Order
+    ): Boolean {
+        return try {
+
+            val formatter = DateTimeFormatter.ofPattern(
+                "h:mm a",
+                Locale.ENGLISH
+            )
+
+            val parts = order.pickupTime.split(" - ")
+
+            if (parts.size != 2) {
+                return false
+            }
+
+            val start = LocalTime.parse(
+                parts[0].trim(),
+                formatter
+            )
+
+            val end = LocalTime.parse(
+                parts[1].trim(),
+                formatter
+            )
+
+            val orderDate =
+                parse(order.createdAt)
+                    .atZone(
+                        ZoneId.of("Asia/Kuala_Lumpur")
+                    )
+                    .toLocalDate()
+
+            val endDate =
+                if (end.isBefore(start)) {
+                    orderDate.plusDays(1)
+                } else {
+                    orderDate
+                }
+
+            val pickupEnd =
+                LocalDateTime.of(
+                    endDate,
+                    end
+                )
+
+            LocalDateTime.now(
+                ZoneId.of("Asia/Kuala_Lumpur")
+            ).isAfter(pickupEnd)
+
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private suspend fun checkProviderNotifications(
         userId: String,
         orderRepository: OrderRepository,
@@ -158,16 +220,7 @@ class NotificationWorker(
                 continue
             }
 
-            val food = runCatching {
-                foodRepository.getFoodListingById(
-                    id = order.foodId
-                )
-            }.getOrNull()
-
-            if (
-                food != null &&
-                food.isPickupTimeEnded()
-            ) {
+            if (isOrderPickupTimeEnded(order)) {
 
                 val eventId =
                     "provider-order-canceled-${order.orderCode}"
@@ -229,7 +282,7 @@ class NotificationWorker(
             val eventId = "new-order-${order.orderCode}"
 
             val createdAt = runCatching {
-                Instant.parse(order.createdAt)
+                parse(order.createdAt)
             }.getOrNull()
 
             if (createdAt != null) {
